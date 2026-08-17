@@ -1,0 +1,922 @@
+<!doctype html>
+<html lang="es" data-theme="light" data-style="classic">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#f2efe7">
+<title>Dominó</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+/* ---------- temas (claro / oscuro) ---------- */
+:root{
+  --bg:#f2efe7; --elev:#fffdf8; --sunk:#e6e2d6; --line:#d9d3c5;
+  --txt:#1a1c18; --dim:#6f6c60;
+  --a:#175f8d; --b:#a8471e;
+  --ok:#0f6b4f; --danger:#b3261e;
+  --ivory:#fbf8f1; --pip:#15170f; --edge:rgba(0,0,0,.20);
+  --shadow:0 1px 2px rgba(0,0,0,.05), 0 10px 28px rgba(0,0,0,.07);
+  --on-solid:#fff;
+}
+[data-theme="dark"]{
+  --bg:#0e1210; --elev:#181d19; --sunk:#080a09; --line:#2a312b;
+  --txt:#ecebe3; --dim:#8d958b;
+  --a:#63aee2; --b:#e58a5c;
+  --ok:#3fbf90; --danger:#f2837b;
+  --ivory:#e7e3d8; --pip:#12140e; --edge:rgba(0,0,0,.45);
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 14px 34px rgba(0,0,0,.5);
+  --on-solid:#0c100d;
+}
+
+/* ---------- estilo "Simple": todo monocromático ---------- */
+[data-style="mono"]{
+  --a:var(--txt); --b:var(--txt); --ok:var(--txt); --danger:var(--txt);
+  --shadow:none;
+}
+[data-style="mono"] .add{
+  background:transparent; border:1.5px solid var(--txt); color:var(--txt); box-shadow:none;
+}
+[data-style="mono"] .mode-card{background:transparent}
+[data-style="mono"] .chips{display:none}
+[data-style="mono"] .bar{height:4px}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+  overscroll-behavior:none; -webkit-user-select:none; user-select:none;
+  transition:background .25s ease, color .25s ease;
+}
+button,input{font:inherit;color:inherit}
+button{border:0;background:none;cursor:pointer}
+
+#app{height:100%;display:flex;flex-direction:column;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.screen{display:none;flex:1;min-height:0;flex-direction:column}
+.screen.on{display:flex}
+
+/* ---------- barra superior ---------- */
+.top{display:flex;align-items:center;gap:6px;padding:10px 12px 4px;min-height:52px}
+.top .grow{flex:1}
+.icon-btn{width:42px;height:42px;border-radius:13px;color:var(--dim);
+  display:grid;place-items:center;font-size:19px;line-height:1}
+.icon-btn:active{background:var(--sunk)}
+.icon-btn svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- fichas de dominó (svg) ---------- */
+.t-face{fill:var(--ivory);stroke:var(--edge);stroke-width:2}
+.t-line{stroke:var(--edge);stroke-width:2.5;stroke-linecap:round}
+.t-pip{fill:var(--pip)}
+
+/* ---------- pantalla: elegir modo ---------- */
+.mode-wrap{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;
+  gap:26px;padding:0 20px 48px}
+.brand{font-size:clamp(30px,10vw,44px);font-weight:800;letter-spacing:-.03em;text-align:center}
+.brand span{color:var(--ok)}
+.kicker{text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:var(--dim);
+  text-align:center;font-weight:600}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:14px}
+.mode-card{background:var(--elev);border:1px solid var(--line);border-radius:22px;
+  padding:24px 10px 18px;display:flex;flex-direction:column;align-items:center;gap:14px;
+  box-shadow:var(--shadow);transition:transform .12s ease}
+.mode-card:active{transform:scale(.955)}
+.mode-card svg{height:104px;width:auto}
+.mode-name{font-weight:700;font-size:17px;letter-spacing:-.01em}
+.mode-sub{font-size:11.5px;color:var(--dim);margin-top:-9px}
+.meta-note{text-align:center;font-size:13px;color:var(--dim)}
+.meta-note b{color:var(--txt);font-weight:700}
+
+/* ---------- tablero ---------- */
+.badge{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--dim)}
+.badge svg{height:26px;width:auto}
+.badge .sep{opacity:.45}
+.badge .goal{color:var(--txt)}
+
+/* contador de partida de la sesión */
+.gamebar{display:flex;align-items:center;gap:12px;padding:2px 20px 8px}
+.gamebar .rule{flex:1;height:1px;background:var(--line)}
+.gamebar .ord{font-size:11px;font-weight:700;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--dim);white-space:nowrap}
+
+.board{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1px 1fr;align-items:stretch}
+.vline{background:var(--line)}
+.team{position:relative;display:flex;flex-direction:column;align-items:center;
+  min-width:0;min-height:0;padding:4px 6px 0}
+
+/* ---------- reacciones flotantes (solo estilo "Clásico") ---------- */
+.fx{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.pop-word{font-size:clamp(19px,6.5vw,28px);font-weight:800;letter-spacing:-.02em;
+  color:var(--tc);white-space:nowrap;
+  text-shadow:0 0 12px var(--bg),0 0 5px var(--bg),0 2px 6px var(--bg);
+  animation:floatup 1.9s cubic-bezier(.2,.7,.3,1) forwards}
+@keyframes floatup{
+  0%  {opacity:0;transform:translateY(20px) scale(.75) rotate(-3deg)}
+  16% {opacity:1;transform:translateY(0)    scale(1.08) rotate(-3deg)}
+  28% {opacity:1;transform:translateY(-3px) scale(1)    rotate(-3deg)}
+  72% {opacity:1}
+  100%{opacity:0;transform:translateY(-74px) scale(1)   rotate(-3deg)}
+}
+.team-top{display:flex;flex-direction:column;align-items:center;gap:9px;
+  flex:0 0 auto;width:100%;padding:6px 4px 14px}
+.team[data-team="0"]{--tc:var(--a)} .team[data-team="1"]{--tc:var(--b)}
+.name{width:100%;max-width:170px;text-align:center;background:transparent;border:0;
+  border-bottom:1px dashed transparent;font-size:14px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--dim);padding:3px 0;outline:none;min-width:0}
+.name:focus{border-bottom-color:var(--tc);color:var(--txt)}
+.games{font-size:11px;color:var(--dim);letter-spacing:.05em;height:14px}
+.games b{color:var(--tc)}
+
+/* el equipo que va ganando muestra su puntuación un 3% más grande */
+.score{--k:1;
+  font-size:calc(clamp(52px,19vw,108px) * var(--k));
+  font-weight:800;line-height:.88;font-variant-numeric:tabular-nums;
+  color:var(--tc);letter-spacing:-.04em;transition:font-size .28s cubic-bezier(.2,.8,.2,1)}
+.team.lead .score{--k:1.03}
+
+.bar{width:100%;max-width:150px;height:6px;border-radius:99px;background:var(--sunk);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--tc);border-radius:99px;
+  transition:width .3s cubic-bezier(.2,.8,.2,1)}
+.need{font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums;height:15px}
+.add{margin-top:6px;padding:12px 24px;border-radius:14px;background:var(--tc);
+  color:var(--on-solid);font-weight:700;font-size:15px;transition:transform .1s ease}
+.add:active{transform:scale(.94)}
+.add:disabled{opacity:.35}
+
+/* ---------- puntos anotados de cada equipo (el más nuevo arriba) ---------- */
+.entries{flex:1;min-height:0;width:100%;overflow-y:auto;scrollbar-width:none;
+  border-top:1px solid var(--line);padding:7px 0 12px;
+  display:flex;flex-direction:column;-webkit-overflow-scrolling:touch}
+.entries::-webkit-scrollbar{display:none}
+.erow{display:grid;grid-template-columns:38px 1fr 26px;align-items:center;padding:2px 0}
+.erow .pts{grid-column:2;text-align:center;font-size:17px;font-weight:600;
+  font-variant-numeric:tabular-nums;color:var(--dim)}
+.erow.last .pts{color:var(--tc);font-weight:700}
+/* logos de los atajos, al lado de la cifra (la cifra queda siempre centrada) */
+.erow .marks{grid-column:1;display:flex;align-items:center;justify-content:flex-end;
+  gap:3px;color:var(--dim)}
+.erow .marks .pg{display:flex;align-items:center;gap:1px}
+.erow .marks .mark{width:14px;height:14px;flex:0 0 auto;
+  fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.erow .marks .xn{font-size:10px;font-weight:700;font-style:normal}
+.erow .marks .tmark svg{display:block;height:17px;width:auto}
+.del-x{grid-column:3;width:26px;height:26px;border-radius:8px;
+  display:grid;place-items:center;color:var(--dim)}
+.del-x:active{background:var(--sunk);color:var(--danger)}
+.del-x svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
+
+/* ---------- pie: volver al resultado ---------- */
+.foot{display:none;justify-content:center;align-items:center;
+  border-top:1px solid var(--line);padding:6px 12px 10px}
+.foot.on{display:flex}
+.result{display:flex;align-items:center;gap:8px;padding:11px 22px;border-radius:13px;
+  font-size:13.5px;font-weight:700;background:var(--wc);color:var(--on-solid)}
+.result svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- menú de opciones ---------- */
+.menu{position:fixed;top:58px;right:12px;z-index:30;background:var(--elev);
+  border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);
+  padding:6px;min-width:222px;opacity:0;transform:translateY(-6px) scale(.97);
+  pointer-events:none;transition:.16s ease}
+.menu.on{opacity:1;transform:none;pointer-events:auto}
+.menu .lbl{padding:8px 13px 5px;font-size:10.5px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--dim)}
+.menu button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;
+  padding:11px 13px;border-radius:11px;font-size:14.5px}
+.menu button:active{background:var(--sunk)}
+.menu .tick{width:15px;flex:0 0 15px;opacity:0;color:var(--ok);font-weight:800}
+.menu button[aria-checked="true"] .tick{opacity:1}
+.menu button[aria-checked="true"]{font-weight:600}
+.menu .sep{height:1px;background:var(--line);margin:6px 8px}
+.menu .indent{padding-left:13px}
+
+/* reacción a pantalla completa: se ve el tablero por debajo */
+.fxfull{position:fixed;inset:0;z-index:45;pointer-events:none;padding:16px;
+  display:flex;align-items:center;justify-content:center}
+.big-word{font-size:clamp(46px,19vw,150px);font-weight:800;letter-spacing:-.045em;
+  color:var(--wc);white-space:nowrap;text-align:center;
+  text-shadow:0 0 34px var(--bg),0 0 16px var(--bg),0 0 7px var(--bg),0 5px 18px var(--bg);
+  animation:bigpop 2.6s cubic-bezier(.2,.8,.3,1) forwards}
+@keyframes bigpop{
+  0%  {opacity:0;transform:scale(.3)  rotate(-12deg)}
+  12% {opacity:1;transform:scale(1.14) rotate(-5deg)}
+  22% {opacity:1;transform:scale(1)    rotate(-5deg)}
+  68% {opacity:1;transform:scale(1)    rotate(-5deg)}
+  100%{opacity:0;transform:scale(1.3)  rotate(-5deg)}
+}
+
+/* ---------- capas ---------- */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);
+  opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
+.scrim.on{opacity:1;pointer-events:auto}
+
+/* teclado de puntos */
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--elev);
+  border-radius:26px 26px 0 0;padding:10px 14px calc(16px + env(safe-area-inset-bottom));
+  transform:translateY(110%);transition:transform .28s cubic-bezier(.2,.8,.2,1);
+  box-shadow:0 -10px 40px rgba(0,0,0,.28);border-top:1px solid var(--line)}
+.sheet.on{transform:none}
+.handle{width:38px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 12px}
+.sheet-head{display:flex;align-items:baseline;justify-content:space-between;padding:0 4px 12px}
+.sheet-head .who{font-size:12px;text-transform:uppercase;letter-spacing:.12em;
+  font-weight:700;color:var(--pt)}
+.entry{font-size:40px;font-weight:800;font-variant-numeric:tabular-nums;
+  letter-spacing:-.03em;color:var(--pt)}
+.entry.zero{opacity:.28}
+/* atajos del estilo "Clásico": pase corrido y capicúa */
+.chips{display:flex;gap:10px;justify-content:center;align-items:stretch;padding:2px 4px 13px}
+.chips button{flex:1;max-width:162px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:5px;padding:11px 10px;border-radius:18px;
+  border:1px solid var(--line);transition:transform .08s ease}
+.chips button:active{background:var(--sunk);transform:scale(.95)}
+/* capicúa marcada: se conmuta, no se acumula */
+.chips button.on{border-color:var(--pt);box-shadow:inset 0 0 0 1px var(--pt)}
+.chips button.on .chip-lbl,.chips button.on .chip-val{color:var(--pt)}
+/* franja fija arriba para que icono y ficha alineen las dos fichas entre sí */
+.chips .chip-top{height:36px;display:flex;align-items:center;justify-content:center}
+.chips .chip-ico{width:24px;height:24px;color:var(--dim);
+  fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.chips .chip-tile svg{display:block;height:34px;width:auto}
+.chips .chip-lbl{display:grid;place-items:center;min-height:2.3em;text-align:center;
+  font-size:12.5px;font-weight:600;line-height:1.15;color:var(--dim)}
+.chips .chip-val{font-size:17px;font-weight:800;color:var(--txt);font-variant-numeric:tabular-nums}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pad button{height:56px;border-radius:15px;background:var(--bg);font-size:24px;font-weight:600;
+  font-variant-numeric:tabular-nums;transition:transform .08s ease}
+.pad button:active{transform:scale(.94);background:var(--sunk)}
+.pad .go{background:var(--pt);color:var(--on-solid);font-size:20px;font-weight:700}
+.pad .del svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round}
+
+/* diálogo de confirmación */
+.ask{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:26px;
+  background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .18s}
+.ask.on{opacity:1;pointer-events:auto}
+.ask-card{background:var(--elev);border:1px solid var(--line);border-radius:22px;padding:22px;
+  max-width:330px;width:100%;transform:scale(.95);transition:transform .18s}
+.ask.on .ask-card{transform:none}
+.ask h3{font-size:17.5px;font-weight:700;margin-bottom:7px}
+.ask p{font-size:14px;color:var(--dim);line-height:1.45;margin-bottom:18px}
+.ask-btns{display:flex;gap:9px}
+.ask-btns button{flex:1;padding:12px;border-radius:14px;font-weight:600;font-size:14.5px}
+.ask-btns .no{border:1px solid var(--line);color:var(--dim)}
+.ask-btns .yes{background:var(--ok);color:var(--on-solid)}
+.ask-btns .yes.danger{background:var(--danger)}
+
+/* pantalla de ganador */
+.win{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:15px;padding:30px;
+  opacity:0;pointer-events:none;transition:opacity .25s}
+.win.on{opacity:1;pointer-events:auto}
+.win svg{height:118px;width:auto;animation:pop .5s cubic-bezier(.2,1.3,.4,1)}
+@keyframes pop{from{transform:scale(.4) rotate(-14deg);opacity:0}}
+.win .cap{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);font-weight:700}
+/* ganó dejando al otro en cero */
+.win .lisa{padding:7px 18px;border-radius:99px;background:var(--wc);color:var(--on-solid);
+  font-size:15px;font-weight:800;letter-spacing:.03em;
+  animation:lisaPop .45s .15s cubic-bezier(.2,1.4,.4,1) both}
+.win .lisa[hidden]{display:none}
+@keyframes lisaPop{from{opacity:0;transform:scale(.5) rotate(-8deg)}}
+.win .who{font-size:clamp(30px,10vw,42px);font-weight:800;letter-spacing:-.03em;
+  color:var(--wc);text-align:center;line-height:1.05}
+.win .final{font-size:19px;font-weight:600;color:var(--dim);font-variant-numeric:tabular-nums}
+.win .acts{display:flex;flex-direction:column;gap:9px;width:100%;max-width:290px;margin-top:12px}
+.win .acts button{padding:14px;border-radius:16px;font-weight:700;font-size:15px}
+.win .acts .primary{background:var(--wc);color:var(--on-solid)}
+.win .acts .ghost{border:1px solid var(--line);color:var(--dim);font-weight:600}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ============ pantalla 1: elegir modo ============ -->
+  <section class="screen on" id="sc-mode">
+    <div class="top">
+      <div class="grow"></div>
+      <button class="icon-btn" data-theme-toggle aria-label="Cambiar tema"></button>
+    </div>
+    <div class="mode-wrap">
+      <div class="brand">Domin<span>ó</span></div>
+      <div>
+        <p class="kicker">Elige el modo</p>
+        <div class="modes">
+          <button class="mode-card" data-mode="dom">
+            <span class="tile"></span>
+            <span class="mode-name">Dominicano</span>
+            <span class="mode-sub">Doble 6</span>
+          </button>
+          <button class="mode-card" data-mode="cub">
+            <span class="tile"></span>
+            <span class="mode-name">Cubano</span>
+            <span class="mode-sub">Doble 9</span>
+          </button>
+        </div>
+      </div>
+      <p class="meta-note">Jugando a <b>200</b> puntos</p>
+    </div>
+  </section>
+
+  <!-- ============ pantalla 2: tablero ============ -->
+  <section class="screen" id="sc-game">
+    <div class="top">
+      <div class="badge">
+        <span class="tile" id="badge-tile"></span>
+        <span id="badge-mode">Dominicano</span>
+        <span class="sep">·</span>
+        <span class="goal">200</span>
+      </div>
+      <div class="grow"></div>
+      <button class="icon-btn" data-theme-toggle aria-label="Cambiar tema"></button>
+      <button class="icon-btn" id="btn-menu" aria-label="Opciones">
+        <svg viewBox="0 0 24 24" stroke="none" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+      </button>
+    </div>
+
+    <div class="gamebar">
+      <span class="rule"></span>
+      <span class="ord" id="ord">Primera</span>
+      <span class="rule"></span>
+    </div>
+
+    <div class="board" id="board">
+      <div class="team" data-team="0">
+        <div class="team-top">
+          <input class="name" maxlength="12" spellcheck="false" value="Nosotros">
+          <div class="games"></div>
+          <div class="score">0</div>
+          <div class="bar"><i style="width:0"></i></div>
+          <div class="need"></div>
+          <button class="add">+ Anotar</button>
+        </div>
+        <div class="entries"></div>
+        <div class="fx"></div>
+      </div>
+      <div class="vline"></div>
+      <div class="team" data-team="1">
+        <div class="team-top">
+          <input class="name" maxlength="12" spellcheck="false" value="Ellos">
+          <div class="games"></div>
+          <div class="score">0</div>
+          <div class="bar"><i style="width:0"></i></div>
+          <div class="need"></div>
+          <button class="add">+ Anotar</button>
+        </div>
+        <div class="entries"></div>
+        <div class="fx"></div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <button class="result" id="btn-result">
+        Revisar la mano
+        <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  </section>
+
+</div>
+
+<!-- menú de opciones -->
+<div class="menu" id="menu">
+  <div class="lbl">Estilo</div>
+  <button class="indent" data-set-style="classic"><span class="tick">✓</span>Clásico</button>
+  <button class="indent" data-set-style="mono"><span class="tick">✓</span>Simple</button>
+  <div class="sep"></div>
+  <button data-act="new"><span class="tick"></span>Nueva mano</button>
+  <button data-act="mode"><span class="tick"></span>Modo</button>
+  <button data-act="reset"><span class="tick"></span>Limpiar</button>
+</div>
+
+<!-- reacción a pantalla completa (¡Lisa!) -->
+<div class="fxfull" id="fxfull"></div>
+
+<!-- capa oscura compartida -->
+<div class="scrim" id="scrim"></div>
+
+<!-- teclado de puntos -->
+<div class="sheet" id="sheet">
+  <div class="handle"></div>
+  <div class="sheet-head">
+    <span class="who" id="pad-team">Nosotros</span>
+    <span class="entry zero" id="pad-entry">0</span>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="pad" id="pad">
+    <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+    <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+    <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+    <button class="del" data-k="del" aria-label="Borrar"><svg viewBox="0 0 24 24"><path d="M20 6H9l-5 6 5 6h11a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/><path d="M17 10l-4 4M13 10l4 4"/></svg></button>
+    <button data-k="0">0</button>
+    <button class="go" data-k="ok">Anotar</button>
+  </div>
+</div>
+
+<!-- diálogo -->
+<div class="ask" id="ask">
+  <div class="ask-card">
+    <h3 id="ask-title"></h3>
+    <p id="ask-msg"></p>
+    <div class="ask-btns">
+      <button class="no" id="ask-no">Cancelar</button>
+      <button class="yes" id="ask-yes">Sí</button>
+    </div>
+  </div>
+</div>
+
+<!-- ganador -->
+<div class="win" id="win">
+  <span class="tile" id="win-tile"></span>
+  <div class="cap" id="win-cap">Primera mano</div>
+  <div class="lisa" id="win-lisa" hidden>¡Lisa!</div>
+  <div class="who" id="win-name"></div>
+  <div class="final" id="win-final"></div>
+  <div class="acts">
+    <button class="primary" id="win-new">Nueva mano</button>
+    <button class="ghost" id="win-close">Ver Puntos</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+/* ============================================================
+   Configuración
+   ============================================================ */
+const TARGET   = 200;                  // meta de puntos
+const IDLE_MS  = 1 * 60 * 60 * 1000;   // 1 h sin usar la app -> sesión nueva
+const KEY      = 'domino.v2';
+const MODES    = { dom:{ label:'Dominicano', pips:6 }, cub:{ label:'Cubano', pips:9 } };
+const CHIP_PTS = 30;                   // pase corrido y doble, solo en el estilo "Clásico"
+const ORDINALS = ['Primera','Segunda','Tercera','Cuarta','Quinta',
+                  'Sexta','Séptima','Octava','Novena','Décima'];
+
+// Reacciones del estilo "Clásico". Se elige una al azar según lo anotado.
+const REACTIONS = {
+  big:  ['¡No ombe!', '¡Ayayai!', '¡Duro con eso!', '¡Uuf!'],
+  huge: ['¡Qué palo!', '¡Abusadoraso!', 'Tumba eso ya', '¡Barajen los presos!'],
+  capi: ['¡Capicúa!']
+};
+const BIG_PTS = 45;    // más de esto en una sola anotación ya es abuso
+const HUGE_PTS = 80;
+
+/* ============================================================
+   Fichas de dominó en SVG
+   ============================================================ */
+// posiciones [columna, fila] dentro de una cuadrícula 3x3
+const LAYOUT = {
+  0: [],
+  1: [[1,1]],
+  2: [[0,0],[2,2]],
+  3: [[0,0],[1,1],[2,2]],
+  4: [[0,0],[2,0],[0,2],[2,2]],
+  5: [[0,0],[2,0],[1,1],[0,2],[2,2]],
+  6: [[0,0],[2,0],[0,1],[2,1],[0,2],[2,2]],
+  7: [[0,0],[2,0],[0,1],[1,1],[2,1],[0,2],[2,2]],
+  8: [[0,0],[1,0],[2,0],[0,1],[2,1],[0,2],[1,2],[2,2]],
+  9: [[0,0],[1,0],[2,0],[0,1],[1,1],[2,1],[0,2],[1,2],[2,2]]
+};
+
+function tileSVG(top, bottom) {
+  const half = (n, yOff) => LAYOUT[n]
+    .map(([c, r]) => `<circle class="t-pip" cx="${26 + c * 24}" cy="${yOff + 26 + r * 24}" r="9"/>`)
+    .join('');
+  return `<svg viewBox="0 0 100 200" role="img" aria-label="Ficha doble ${top}">
+    <rect class="t-face" x="2" y="2" width="96" height="196" rx="13"/>
+    <line class="t-line" x1="14" y1="100" x2="86" y2="100"/>
+    ${half(top, 0)}${half(bottom, 100)}
+  </svg>`;
+}
+
+/* ============================================================
+   Estado
+   ============================================================ */
+const blank = () => ({
+  theme:  matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+  style:  'classic',   // 'classic' | 'mono'
+  mode:   null,        // 'dom' | 'cub'
+  names:  ['Nosotros', 'Ellos'],
+  scores: [0, 0],
+  games:  [0, 0],      // partidas ganadas por equipo
+  rounds: [],          // historial interno, solo para Deshacer
+  over:   -1,          // índice del ganador de la partida actual, o -1
+  seen:   Date.now()   // última vez que se tocó la app
+});
+
+let S = load();
+let winSeen = false;   // no persiste: permite cerrar la pantalla de ganador
+
+function load() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(KEY));
+    return raw && typeof raw === 'object' ? { ...blank(), ...raw } : blank();
+  } catch { return blank(); }
+}
+function save() {
+  S.seen = Date.now();
+  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {}
+}
+
+const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
+const pick = a => a[Math.floor(Math.random() * a.length)];
+
+/* ============================================================
+   Reacciones flotantes (solo en el estilo "Clásico")
+   ============================================================ */
+function react(team, text) {
+  if (S.style !== 'classic') return;
+  const fx = $(`.team[data-team="${team}"] .fx`);
+  if (!fx) return;
+  const el = document.createElement('span');
+  el.className = 'pop-word';
+  el.textContent = text;
+  fx.appendChild(el);
+  setTimeout(() => el.remove(), 2000);   // se va sola al terminar la animación
+}
+
+// lisa: cualquiera de los dos gana dejando al otro en cero
+const isLisa = () => S.over >= 0 && S.scores[1 - S.over] === 0;
+
+// reacción a pantalla completa, por encima del tablero pero sin taparlo del todo
+function bigReact(text) {
+  if (S.style !== 'classic') return;
+  const host = $('#fxfull');
+  host.innerHTML = `<span class="big-word">${text}</span>`;
+  setTimeout(() => { host.innerHTML = ''; }, 2600);
+}
+
+// una sola reacción por anotación, de la más fuerte a la más suave
+function reactTo(team, pts, capi) {
+  if (pts >= HUGE_PTS)     { react(team, pick(REACTIONS.huge)); buzz([14, 45, 14, 45, 14]); }
+  else if (pts > BIG_PTS)  { react(team, pick(REACTIONS.big));  buzz([12, 40, 12]); }
+  else if (capi)             react(team, pick(REACTIONS.capi));
+}
+
+/* ============================================================
+   Sesión: la cuenta de partidas se reinicia tras 2 h de inactividad
+   ============================================================ */
+// Partida en curso = partidas terminadas + 1. Mientras se ve el resultado
+// de una partida ganada seguimos mostrando el número de ESA partida.
+const gameNo = () => S.games[0] + S.games[1] + (S.over >= 0 ? 0 : 1);
+const ordinal = n => ORDINALS[n - 1] || `Partida ${n}`;
+
+function newSession() {
+  S.mode = null;
+  S.scores = [0, 0];
+  S.games  = [0, 0];
+  S.rounds = [];
+  S.over   = -1;
+  winSeen  = false;
+}
+function checkIdle() {
+  if (Date.now() - (S.seen || 0) > IDLE_MS) {
+    newSession();
+    save(); render();
+  }
+}
+
+/* ============================================================
+   Render
+   ============================================================ */
+function render() {
+  const root = document.documentElement;
+  root.dataset.theme = S.theme;
+  root.dataset.style = S.style;
+  $('meta[name=theme-color]').content = S.theme === 'dark' ? '#0e1210' : '#f2efe7';
+  $$('[data-theme-toggle]').forEach(b => b.innerHTML = S.theme === 'dark' ? sunIcon() : moonIcon());
+  $$('[data-set-style]').forEach(b => b.setAttribute('aria-checked', b.dataset.setStyle === S.style));
+
+  const inGame = !!S.mode;
+  $('#sc-mode').classList.toggle('on', !inGame);
+  $('#sc-game').classList.toggle('on', inGame);
+  if (!inGame) { $('#win').classList.remove('on'); return; }
+
+  const pips = MODES[S.mode].pips;
+  $('#badge-tile').innerHTML = tileSVG(pips, pips);
+  $('#badge-mode').textContent = MODES[S.mode].label;
+  $('#ord').textContent = ordinal(gameNo());
+  $('#chips').innerHTML = chipsHTML();
+
+  const [s0, s1] = S.scores;
+  const leader = s0 === s1 ? -1 : (s0 > s1 ? 0 : 1);
+
+  $$('.team').forEach(el => {
+    const i = +el.dataset.team;
+    const sc = S.scores[i];
+    const nameEl = $('.name', el);
+    if (document.activeElement !== nameEl) nameEl.value = S.names[i];
+    el.classList.toggle('lead', i === leader);
+    $('.games', el).innerHTML = S.games[i]
+      ? `<b>${S.games[i]}</b> ${S.games[i] === 1 ? 'ganada' : 'ganadas'}` : '';
+    $('.score', el).textContent = sc;
+    $('.bar i', el).style.width = Math.min(100, sc / TARGET * 100) + '%';
+    $('.need', el).textContent = S.over >= 0
+      ? (S.over === i ? '¡Ganó!' : '')
+      : `Faltan ${TARGET - sc}`;
+    $('.add', el).disabled = S.over >= 0;
+
+    const list = $('.entries', el);
+    list.innerHTML = entriesHTML(i);
+    list.scrollTop = 0;                 // lo recién anotado va arriba del todo
+  });
+
+  // con la mano cerrada y el resultado ya cerrado, dejar volver a él
+  $('.foot').classList.toggle('on', S.over >= 0 && winSeen);
+  root.style.setProperty('--wc', S.over === 1 ? 'var(--b)' : 'var(--a)');
+
+  const showWin = S.over >= 0 && !winSeen;
+  $('#win').classList.toggle('on', showWin);
+  if (showWin) {
+    const w = S.over;
+    $('#win-tile').innerHTML = tileSVG(pips, pips);
+    $('#win-cap').textContent = `${ordinal(gameNo())} partida`;
+    $('#win-lisa').hidden = !(S.style === 'classic' && isLisa());
+    $('#win-name').textContent = S.names[w] || (w === 0 ? 'Equipo 1' : 'Equipo 2');
+    $('#win-final').textContent = `${S.scores[0]} — ${S.scores[1]}`;
+  }
+}
+
+// flecha circular = pase corrido (grande para el chip, pequeña para el registro)
+const PASE_PATH = `<path d="M20.5 12a8.5 8.5 0 1 1-2.5-6"/><path d="M20.8 3.6v5h-5"/>`;
+const PASE_ICO  = `<svg class="chip-ico" viewBox="0 0 24 24">${PASE_PATH}</svg>`;
+const PASE_MARK = `<svg class="mark" viewBox="0 0 24 24">${PASE_PATH}</svg>`;
+
+// los dos atajos del teclado: el doble cambia según el modo (6 dominicano / 9 cubano)
+function chipsHTML() {
+  const pips = MODES[S.mode].pips;
+  return `
+    <button data-chip="pase" aria-label="Pase corrido, ${CHIP_PTS} puntos">
+      <span class="chip-top">${PASE_ICO}</span>
+      <span class="chip-lbl">Pase<br>Corrido</span>
+      <span class="chip-val">+${CHIP_PTS}</span>
+    </button>
+    <button data-chip="capi" aria-label="Capicúa, ${CHIP_PTS} puntos">
+      <span class="chip-top"><span class="chip-tile">${tileSVG(pips, pips)}</span></span>
+      <span class="chip-lbl">Capicúa</span>
+      <span class="chip-val">+${CHIP_PTS}</span>
+    </button>`;
+}
+
+// puntos anotados por un equipo, el más reciente arriba y con su X para quitarlo.
+// Debajo de la cifra van los logos de los atajos que la compusieron.
+function entriesHTML(team) {
+  const mine = [];
+  S.rounds.forEach((r, i) => { if (r.t === team) mine.push({ ...r, i }); });
+  if (!mine.length) return '';
+  const pips = MODES[S.mode].pips;
+  const newest = mine.length - 1;
+
+  return mine.map((e, n) => {
+    const marks = [], pn = e.pase || 0;
+    if (pn === 1)     marks.push(PASE_MARK);
+    else if (pn > 1)  marks.push(`<span class="pg">${PASE_MARK}<i class="xn">${pn}</i></span>`);
+    if (e.capi)       marks.push(`<span class="tmark">${tileSVG(pips, pips)}</span>`);
+    return `<div class="erow${n === newest ? ' last' : ''}">
+      <span class="pts">${e.p}</span>
+      ${marks.length ? `<span class="marks">${marks.join('')}</span>` : ''}
+      ${n === newest ? `<button class="del-x" data-del="${e.i}" aria-label="Quitar ${e.p} puntos"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>` : ''}
+    </div>`;
+  }).reverse().join('');
+}
+
+const sunIcon  = () => `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2M12 19.4v2M21.4 12h-2M4.6 12h-2M18.6 5.4l-1.4 1.4M6.8 17.2l-1.4 1.4M18.6 18.6l-1.4-1.4M6.8 6.8L5.4 5.4"/></svg>`;
+const moonIcon = () => `<svg viewBox="0 0 24 24"><path d="M20.5 14.5A8.6 8.6 0 0 1 9.5 3.5a8.6 8.6 0 1 0 11 11z"/></svg>`;
+
+/* ============================================================
+   Acciones de juego
+   ============================================================ */
+// Los puntos anotados son la única fuente de verdad: tras cualquier cambio se
+// recalculan los totales y si la mano sigue (o vuelve a estar) ganada.
+function recount() {
+  const prev = S.over;
+  S.scores = [0, 0];
+  S.rounds.forEach(r => { S.scores[r.t] += r.p; });
+
+  let w = -1;
+  if (S.scores[0] >= TARGET || S.scores[1] >= TARGET) w = S.scores[0] >= S.scores[1] ? 0 : 1;
+
+  if (w !== prev) {
+    if (prev >= 0) S.games[prev] = Math.max(0, S.games[prev] - 1);
+    // al ganar NO saltamos a la pantalla de resultado: se queda el tablero y
+    // aparece "Revisar la mano" en el pie por si la quieren ver.
+    if (w   >= 0) { S.games[w]++; winSeen = true; }
+    S.over = w;
+  }
+}
+
+function addRound(team, pts, pase = 0, capi = false) {
+  if (S.over >= 0 || !(pts > 0)) return;
+  const r = { t: team, p: pts };
+  if (pase) r.pase = pase;      // cuántos pases corridos entraron en estos puntos
+  if (capi) r.capi = 1;         // si hubo capicúa (solo puede haber una)
+  S.rounds.push(r);
+  recount();
+  save(); render();                      // pintar antes: la reacción usa --wc ya puesto
+  if (S.over === team) {                 // ganar manda: una sola reacción
+    buzz([18, 60, 18, 60, 40]);
+    if (isLisa()) bigReact('¡Lisa!');
+  } else {
+    reactTo(team, pts, capi);
+  }
+}
+
+// quitar un punto anotado con la X (siempre el último de ese equipo)
+function removeEntry(i) {
+  if (!(i >= 0 && i < S.rounds.length)) return;
+  S.rounds.splice(i, 1);
+  recount();
+  save(); render();
+}
+
+function newGame() {
+  S.scores = [0, 0]; S.rounds = []; S.over = -1; winSeen = false;
+  save(); render();
+}
+
+/* ============================================================
+   Teclado de puntos
+   ============================================================ */
+// Cada toque es una operación aparte, así ⌫ deshace lo último sea dígito o atajo.
+// { k:'d', v:'7' } dígito · { k:'pase' } pase corrido · { k:'capi' } capicúa
+let padTeam = 0, padOps = [];
+
+const padDigits = () => padOps.filter(o => o.k === 'd').map(o => o.v).join('');
+const padPase   = () => padOps.filter(o => o.k === 'pase').length;
+const padCapi   = () => padOps.some(o => o.k === 'capi');
+const padTotal  = () => (+padDigits() || 0) + (padPase() + (padCapi() ? 1 : 0)) * CHIP_PTS;
+
+function openPad(team) {
+  padTeam = team; padOps = [];
+  $('#sheet').style.setProperty('--pt', team === 0 ? 'var(--a)' : 'var(--b)');
+  $('#pad-team').textContent = S.names[team] || (team === 0 ? 'Equipo 1' : 'Equipo 2');
+  paintPad();
+  $('#sheet').classList.add('on');
+  $('#scrim').classList.add('on');
+}
+function closePad() {
+  $('#sheet').classList.remove('on');
+  $('#scrim').classList.remove('on');
+}
+function paintPad() {
+  const n = padTotal();
+  $('#pad-entry').textContent = n;
+  $('#pad-entry').classList.toggle('zero', n === 0);
+  // la capicúa es única por mano: el chip queda marcado en vez de sumar otra vez
+  $$('#chips button').forEach(b => b.classList.toggle('on', b.dataset.chip === 'capi' && padCapi()));
+}
+function padKey(k) {
+  buzz(6);
+  if (k === 'del') padOps.pop();
+  else if (k === 'ok') {
+    const n = padTotal(), pase = padPase(), capi = padCapi();
+    closePad();
+    if (n > 0) addRound(padTeam, n, pase, capi);
+    return;
+  }
+  else if (padDigits().length < 3) padOps.push({ k: 'd', v: k });
+  paintPad();
+}
+
+$('#chips').addEventListener('click', e => {
+  const b = e.target.closest('[data-chip]'); if (!b) return;
+  buzz(6);
+  if (b.dataset.chip === 'capi') {
+    const i = padOps.findIndex(o => o.k === 'capi');
+    if (i >= 0) padOps.splice(i, 1); else padOps.push({ k: 'capi' });   // conmuta
+  } else {
+    padOps.push({ k: 'pase' });                                          // sí acumula
+  }
+  paintPad();
+});
+$('#pad').addEventListener('click', e => {
+  const b = e.target.closest('[data-k]'); if (!b) return;
+  padKey(b.dataset.k);
+});
+
+/* ============================================================
+   Diálogo de confirmación
+   ============================================================ */
+function ask(title, msg, okLabel = 'Sí', danger = false) {
+  return new Promise(resolve => {
+    $('#ask-title').textContent = title;
+    $('#ask-msg').textContent = msg;
+    $('#ask-yes').textContent = okLabel;
+    $('#ask-yes').classList.toggle('danger', danger);
+    $('#ask').classList.add('on');
+    const done = v => {
+      $('#ask').classList.remove('on');
+      $('#ask-yes').onclick = $('#ask-no').onclick = null;
+      resolve(v);
+    };
+    $('#ask-yes').onclick = () => done(true);
+    $('#ask-no').onclick  = () => done(false);
+  });
+}
+
+/* ============================================================
+   Eventos
+   ============================================================ */
+$$('[data-theme-toggle]').forEach(b => b.addEventListener('click', () => {
+  S.theme = S.theme === 'dark' ? 'light' : 'dark';
+  buzz(8); save(); render();
+}));
+
+$$('[data-mode]').forEach(card => card.addEventListener('click', () => {
+  S.mode = card.dataset.mode;
+  buzz(12); save(); render();
+}));
+
+$$('.team').forEach(el => {
+  const i = +el.dataset.team;
+  $('.add', el).addEventListener('click', () => { buzz(10); openPad(i); });
+  const nameEl = $('.name', el);
+  nameEl.addEventListener('focus', () => nameEl.select());
+  nameEl.addEventListener('input', () => { S.names[i] = nameEl.value; save(); });
+  nameEl.addEventListener('blur', () => {
+    S.names[i] = nameEl.value.trim() || (i === 0 ? 'Nosotros' : 'Ellos');
+    save(); render();
+  });
+  nameEl.addEventListener('keydown', e => { if (e.key === 'Enter') nameEl.blur(); });
+});
+
+$('#board').addEventListener('click', e => {
+  const x = e.target.closest('[data-del]'); if (!x) return;
+  buzz(10); removeEntry(+x.dataset.del);
+});
+
+$('#btn-result').addEventListener('click', () => { buzz(10); winSeen = false; render(); });
+
+const menu = $('#menu');
+$('#btn-menu').addEventListener('click', e => { e.stopPropagation(); menu.classList.toggle('on'); });
+document.addEventListener('click', () => menu.classList.remove('on'));
+
+menu.addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  menu.classList.remove('on');
+  buzz(8);
+
+  if (b.dataset.setStyle) { S.style = b.dataset.setStyle; save(); render(); return; }
+
+  const act = b.dataset.act;
+  if (act === 'new') {
+    if (S.rounds.length && S.over < 0 &&
+        !await ask('Nueva partida', 'Se borran los puntos de la partida actual. Las partidas ganadas se mantienen.', 'Empezar')) return;
+    newGame();
+  }
+  if (act === 'mode') {
+    if (S.rounds.length && S.over < 0 &&
+        !await ask('Cambiar de modo', 'La partida en curso se reinicia.', 'Cambiar')) return;
+    newGame(); S.mode = null; save(); render();
+  }
+  if (act === 'reset') {
+    if (!await ask('Borrar todo', 'Se borran los puntos, las partidas ganadas y los nombres.', 'Borrar', true)) return;
+    const { theme, style } = S;
+    S = blank(); S.theme = theme; S.style = style;
+    winSeen = false; save(); render();
+  }
+});
+
+$('#scrim').addEventListener('click', closePad);
+$('#win-new').addEventListener('click', () => { buzz(12); newGame(); });
+$('#win-close').addEventListener('click', () => { winSeen = true; render(); });
+
+/* ============================================================
+   Ciclo de vida
+   ============================================================ */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') checkIdle();
+});
+setInterval(checkIdle, 60 * 1000);   // también si la app queda abierta pero sin usar
+
+// mantener la pantalla encendida mientras se juega
+(async () => {
+  try {
+    if ('wakeLock' in navigator) {
+      let lock = await navigator.wakeLock.request('screen');
+      document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState === 'visible') {
+          try { lock = await navigator.wakeLock.request('screen'); } catch {}
+        }
+      });
+    }
+  } catch {}
+})();
+
+// instalable y con funcionamiento sin internet
+if ('serviceWorker' in navigator) {
+  addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+}
+
+checkIdle();
+render();
+</script>
+</body>
+</html>
