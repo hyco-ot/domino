@@ -181,14 +181,56 @@ button{border:0;background:none;cursor:pointer}
 .del-x:active{background:var(--sunk);color:var(--danger)}
 .del-x svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
 
-/* ---------- pie: volver al resultado ---------- */
-.foot{display:none;justify-content:center;align-items:center;
-  border-top:1px solid var(--line);padding:6px 12px 10px}
-.foot.on{display:flex}
-.result{display:flex;align-items:center;gap:8px;padding:11px 22px;border-radius:13px;
-  font-size:13.5px;font-weight:700;background:var(--wc);color:var(--on-solid)}
+/* ---------- pie: ajustes · resultado · historial ---------- */
+.foot{display:flex;justify-content:space-between;align-items:center;gap:6px;
+  border-top:1px solid var(--line);padding:6px 8px 10px}
+.foot-btn{display:flex;align-items:center;gap:7px;padding:10px 13px;border-radius:12px;
+  font-size:12.5px;font-weight:600;color:var(--dim)}
+.foot-btn:active{background:var(--sunk)}
+.foot-btn svg{width:17px;height:17px;flex:0 0 auto;fill:none;stroke:currentColor;
+  stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.result{display:flex;align-items:center;gap:8px;padding:11px 18px;border-radius:13px;
+  font-size:13px;font-weight:700;background:var(--wc);color:var(--on-solid)}
+.result[hidden]{display:none}
 .result svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;
   stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- pantallas de ajustes e historial ---------- */
+.scr-title{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.sheetish{flex:1;min-height:0;overflow-y:auto;padding:6px 18px 28px;
+  display:flex;flex-direction:column;gap:26px}
+.cfg-lbl{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:11px}
+.cfg-hint{font-size:12px;color:var(--dim);margin-top:10px;line-height:1.45}
+
+/* selector de puntos */
+.stepper{display:flex;align-items:center;gap:14px;justify-content:center;
+  background:var(--elev);border:1px solid var(--line);border-radius:18px;padding:10px}
+.stepper button{width:46px;height:46px;border-radius:14px;background:var(--sunk);
+  font-size:24px;font-weight:600;line-height:1;display:grid;place-items:center}
+.stepper button:active{transform:scale(.93)}
+.stepper .val{min-width:88px;text-align:center;font-size:34px;font-weight:800;
+  font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+
+/* grupos de botones (presets y tema) */
+.seg{display:flex;gap:8px;margin-top:10px}
+.seg button{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
+  padding:12px 8px;border-radius:14px;border:1px solid var(--line);
+  font-size:14px;font-weight:600;color:var(--dim);font-variant-numeric:tabular-nums}
+.seg button:active{background:var(--sunk)}
+.seg button[aria-checked="true"]{border-color:var(--ok);color:var(--ok);
+  box-shadow:inset 0 0 0 1px var(--ok)}
+.seg button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round}
+
+/* historial */
+.stat-card{background:var(--elev);border:1px solid var(--line);border-radius:18px;padding:16px}
+.stat-row{display:flex;align-items:baseline;justify-content:space-between;padding:7px 0}
+.stat-row + .stat-row{border-top:1px solid var(--line)}
+.stat-row .k{font-size:13.5px;color:var(--dim)}
+.stat-row .v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
+.stat-row .v.t0{color:var(--a)} .stat-row .v.t1{color:var(--b)}
+.stat-empty{text-align:center;color:var(--dim);font-size:13.5px;line-height:1.5;padding:26px 6px}
 
 /* ---------- menú de opciones ---------- */
 .menu{position:fixed;top:58px;right:12px;z-index:30;background:var(--elev);
@@ -248,10 +290,16 @@ button{border:0;background:none;cursor:pointer}
 .chips button{flex:1;max-width:162px;display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:5px;padding:11px 10px;border-radius:18px;
   border:1px solid var(--line);transition:transform .08s ease}
+.chips button{position:relative}
 .chips button:active{background:var(--sunk);transform:scale(.95)}
-/* capicúa marcada: se conmuta, no se acumula */
+/* capicúa marcada (se conmuta) y pase corrido con cuenta (se acumula) */
 .chips button.on{border-color:var(--pt);box-shadow:inset 0 0 0 1px var(--pt)}
 .chips button.on .chip-lbl,.chips button.on .chip-val{color:var(--pt)}
+.chip-n{position:absolute;top:7px;right:8px;min-width:20px;height:20px;padding:0 5px;
+  border-radius:99px;background:var(--pt);color:var(--on-solid);font-style:normal;
+  font-size:12px;font-weight:800;line-height:20px;text-align:center;
+  font-variant-numeric:tabular-nums}
+.chip-n:empty{display:none}
 /* franja fija arriba para que icono y ficha alineen las dos fichas entre sí */
 .chips .chip-top{height:36px;display:flex;align-items:center;justify-content:center}
 .chips .chip-ico{width:24px;height:24px;color:var(--dim);
@@ -314,7 +362,9 @@ button{border:0;background:none;cursor:pointer}
   <section class="screen on" id="sc-mode">
     <div class="top">
       <div class="grow"></div>
-      <button class="icon-btn" data-theme-toggle aria-label="Cambiar tema"></button>
+      <button class="icon-btn" data-go="config" aria-label="Ajustes">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1"/><path d="M19.1 14.6a1.5 1.5 0 0 0 .3 1.7l.1.1a1.9 1.9 0 1 1-2.7 2.7l-.1-.1a1.5 1.5 0 0 0-2.6 1.1v.2a1.9 1.9 0 1 1-3.8 0v-.1a1.5 1.5 0 0 0-2.6-1.2l-.1.1a1.9 1.9 0 1 1-2.7-2.7l.1-.1a1.5 1.5 0 0 0-1.1-2.6h-.2a1.9 1.9 0 1 1 0-3.8h.1a1.5 1.5 0 0 0 1.2-2.6l-.1-.1a1.9 1.9 0 1 1 2.7-2.7l.1.1a1.5 1.5 0 0 0 2.6-1.1v-.2a1.9 1.9 0 1 1 3.8 0v.1a1.5 1.5 0 0 0 2.6 1.2l.1-.1a1.9 1.9 0 1 1 2.7 2.7l-.1.1a1.5 1.5 0 0 0 1.1 2.6h.2a1.9 1.9 0 1 1 0 3.8h-.1a1.5 1.5 0 0 0-1.4.9z"/></svg>
+      </button>
     </div>
     <div class="mode-wrap">
       <div class="brand">Domin<span>ó</span></div>
@@ -333,7 +383,7 @@ button{border:0;background:none;cursor:pointer}
           </button>
         </div>
       </div>
-      <p class="meta-note">Jugando a <b>200</b> puntos</p>
+      <p class="meta-note">Jugando a <b id="meta-target">200</b> puntos</p>
     </div>
   </section>
 
@@ -344,10 +394,9 @@ button{border:0;background:none;cursor:pointer}
         <span class="tile" id="badge-tile"></span>
         <span id="badge-mode">Dominicano</span>
         <span class="sep">·</span>
-        <span class="goal">200</span>
+        <span class="goal" id="goal">200</span>
       </div>
       <div class="grow"></div>
-      <button class="icon-btn" data-theme-toggle aria-label="Cambiar tema"></button>
       <button class="icon-btn" id="btn-menu" aria-label="Opciones">
         <svg viewBox="0 0 24 24" stroke="none" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
       </button>
@@ -388,11 +437,73 @@ button{border:0;background:none;cursor:pointer}
     </div>
 
     <div class="foot">
-      <button class="result" id="btn-result">
+      <button class="foot-btn" data-go="config">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1"/><path d="M19.1 14.6a1.5 1.5 0 0 0 .3 1.7l.1.1a1.9 1.9 0 1 1-2.7 2.7l-.1-.1a1.5 1.5 0 0 0-2.6 1.1v.2a1.9 1.9 0 1 1-3.8 0v-.1a1.5 1.5 0 0 0-2.6-1.2l-.1.1a1.9 1.9 0 1 1-2.7-2.7l.1-.1a1.5 1.5 0 0 0-1.1-2.6h-.2a1.9 1.9 0 1 1 0-3.8h.1a1.5 1.5 0 0 0 1.2-2.6l-.1-.1a1.9 1.9 0 1 1 2.7-2.7l.1.1a1.5 1.5 0 0 0 2.6-1.1v-.2a1.9 1.9 0 1 1 3.8 0v.1a1.5 1.5 0 0 0 2.6 1.2l.1-.1a1.9 1.9 0 1 1 2.7 2.7l-.1.1a1.5 1.5 0 0 0 1.1 2.6h.2a1.9 1.9 0 1 1 0 3.8h-.1a1.5 1.5 0 0 0-1.4.9z"/></svg>
+        Ajustes
+      </button>
+      <button class="result" id="btn-result" hidden>
         Revisar la mano
         <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
       </button>
+      <button class="foot-btn" data-go="stats">
+        Historial
+        <svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V4M16 20v-6M21 20H3"/></svg>
+      </button>
     </div>
+  </section>
+
+  <!-- ============ pantalla 3: ajustes ============ -->
+  <section class="screen" id="sc-config">
+    <div class="top">
+      <button class="icon-btn" data-go="game" aria-label="Volver">
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="scr-title">Ajustes</div>
+      <div class="grow"></div>
+    </div>
+    <div class="sheetish">
+      <div>
+        <div class="cfg-lbl">Puntos para ganar</div>
+        <div class="stepper">
+          <button data-step="-5" aria-label="Menos cinco">−</button>
+          <span class="val" id="t-val">200</span>
+          <button data-step="5" aria-label="Más cinco">+</button>
+        </div>
+        <div class="seg">
+          <button data-target="100">100</button>
+          <button data-target="150">150</button>
+          <button data-target="200">200</button>
+        </div>
+        <p class="cfg-hint">Se puede cambiar con la mano empezada. Si alguno ya pasó
+          el nuevo tope, la mano se cierra ahí mismo.</p>
+      </div>
+
+      <div>
+        <div class="cfg-lbl">Tema</div>
+        <div class="seg">
+          <button data-set-theme="light">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2M12 19.4v2M21.4 12h-2M4.6 12h-2M18.6 5.4l-1.4 1.4M6.8 17.2l-1.4 1.4M18.6 18.6l-1.4-1.4M6.8 6.8L5.4 5.4"/></svg>
+            Claro
+          </button>
+          <button data-set-theme="dark">
+            <svg viewBox="0 0 24 24"><path d="M20.5 14.5A8.6 8.6 0 0 1 9.5 3.5a8.6 8.6 0 1 0 11 11z"/></svg>
+            Oscuro
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ pantalla 4: historial ============ -->
+  <section class="screen" id="sc-stats">
+    <div class="top">
+      <button class="icon-btn" data-go="game" aria-label="Volver">
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="scr-title">Historial</div>
+      <div class="grow"></div>
+    </div>
+    <div class="sheetish" id="stats-body"></div>
   </section>
 
 </div>
@@ -465,7 +576,8 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 /* ============================================================
    Configuración
    ============================================================ */
-const TARGET   = 200;                  // meta de puntos
+// meta de puntos: ahora vive en el estado (S.target), ajustable desde Ajustes
+const TARGET_MIN = 50, TARGET_MAX = 500, TARGET_STEP = 5;
 const IDLE_MS  = 1 * 60 * 60 * 1000;   // 1 h sin usar la app -> sesión nueva
 const KEY      = 'domino.v2';
 const MODES    = { dom:{ label:'Dominicano', pips:6 }, cub:{ label:'Cubano', pips:9 } };
@@ -519,6 +631,7 @@ function tileSVG(top, bottom) {
 const blank = () => ({
   theme:  matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
   style:  'classic',   // 'classic' | 'mono'
+  target: 200,         // puntos para ganar la mano
   mode:   null,        // 'dom' | 'cub'
   names:  ['Nosotros', 'Ellos'],
   scores: [0, 0],
@@ -530,6 +643,7 @@ const blank = () => ({
 
 let S = load();
 let winSeen = false;   // no persiste: permite cerrar la pantalla de ganador
+let view = 'game';     // no persiste: 'game' | 'config' | 'stats'
 
 function load() {
   try {
@@ -608,17 +722,24 @@ function render() {
   root.dataset.theme = S.theme;
   root.dataset.style = S.style;
   $('meta[name=theme-color]').content = BAR_COLOR[S.theme];
-  $$('[data-theme-toggle]').forEach(b => b.innerHTML = S.theme === 'dark' ? sunIcon() : moonIcon());
   $$('[data-set-style]').forEach(b => b.setAttribute('aria-checked', b.dataset.setStyle === S.style));
 
   const inGame = !!S.mode;
-  $('#sc-mode').classList.toggle('on', !inGame);
-  $('#sc-game').classList.toggle('on', inGame);
-  if (!inGame) { $('#win').classList.remove('on'); return; }
+  if (!inGame && view === 'stats') view = 'game';     // sin partida no hay historial
+  $('#sc-mode').classList.toggle('on',   !inGame && view === 'game');
+  $('#sc-game').classList.toggle('on',    inGame && view === 'game');
+  $('#sc-config').classList.toggle('on',  view === 'config');
+  $('#sc-stats').classList.toggle('on',   inGame && view === 'stats');
+
+  $('#meta-target').textContent = S.target;
+  if (view === 'config') { $('#win').classList.remove('on'); renderConfig(); return; }
+  if (view !== 'game')   { $('#win').classList.remove('on'); renderStats(); return; }
+  if (!inGame)           { $('#win').classList.remove('on'); return; }
 
   const pips = MODES[S.mode].pips;
   $('#badge-tile').innerHTML = tileSVG(pips, pips);
   $('#badge-mode').textContent = MODES[S.mode].label;
+  $('#goal').textContent = S.target;
   $('#ord').textContent = ordinal(gameNo());
   $('#chips').innerHTML = chipsHTML();
 
@@ -634,10 +755,10 @@ function render() {
     $('.games', el).innerHTML = S.games[i]
       ? `<b>${S.games[i]}</b> ${S.games[i] === 1 ? 'ganada' : 'ganadas'}` : '';
     $('.score', el).textContent = sc;
-    $('.bar i', el).style.width = Math.min(100, sc / TARGET * 100) + '%';
+    $('.bar i', el).style.width = Math.min(100, sc / S.target * 100) + '%';
     $('.need', el).textContent = S.over >= 0
       ? (S.over === i ? '¡Ganó!' : '')
-      : `Faltan ${TARGET - sc}`;
+      : `Faltan ${S.target - sc}`;
     $('.add', el).disabled = S.over >= 0;
 
     const list = $('.entries', el);
@@ -646,7 +767,7 @@ function render() {
   });
 
   // con la mano cerrada y el resultado ya cerrado, dejar volver a él
-  $('.foot').classList.toggle('on', S.over >= 0 && winSeen);
+  $('#btn-result').hidden = !(S.over >= 0 && winSeen);
   root.style.setProperty('--wc', S.over === 1 ? 'var(--b)' : 'var(--a)');
 
   const showWin = S.over >= 0 && !winSeen;
@@ -671,6 +792,7 @@ function chipsHTML() {
   const pips = MODES[S.mode].pips;
   return `
     <button data-chip="pase" aria-label="Pase corrido, ${CHIP_PTS} puntos">
+      <i class="chip-n"></i>
       <span class="chip-top">${PASE_ICO}</span>
       <span class="chip-lbl">Pase<br>Corrido</span>
       <span class="chip-val">+${CHIP_PTS}</span>
@@ -704,8 +826,39 @@ function entriesHTML(team) {
   }).reverse().join('');
 }
 
-const sunIcon  = () => `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2M12 19.4v2M21.4 12h-2M4.6 12h-2M18.6 5.4l-1.4 1.4M6.8 17.2l-1.4 1.4M18.6 18.6l-1.4-1.4M6.8 6.8L5.4 5.4"/></svg>`;
-const moonIcon = () => `<svg viewBox="0 0 24 24"><path d="M20.5 14.5A8.6 8.6 0 0 1 9.5 3.5a8.6 8.6 0 1 0 11 11z"/></svg>`;
+function renderConfig() {
+  $('#t-val').textContent = S.target;
+  $$('[data-target]').forEach(b => b.setAttribute('aria-checked', +b.dataset.target === S.target));
+  $$('[data-set-theme]').forEach(b => b.setAttribute('aria-checked', b.dataset.setTheme === S.theme));
+}
+
+// De momento solo lo de la sesión actual: no se guardan manos pasadas todavía.
+function renderStats() {
+  const jugadas = S.games[0] + S.games[1];
+  if (!jugadas && !S.rounds.length) {
+    $('#stats-body').innerHTML = `<p class="stat-empty">Todavía no hay nada que contar.<br>
+      Anota unos puntos y vuelve.</p>`;
+    return;
+  }
+  const row = (k, v, cls = '') => `<div class="stat-row"><span class="k">${k}</span><span class="v ${cls}">${v}</span></div>`;
+  $('#stats-body').innerHTML = `
+    <div>
+      <div class="cfg-lbl">Esta sesión</div>
+      <div class="stat-card">
+        ${row('Manos jugadas', jugadas)}
+        ${row(S.names[0], S.games[0], 't0')}
+        ${row(S.names[1], S.games[1], 't1')}
+      </div>
+    </div>
+    <div>
+      <div class="cfg-lbl">Mano en curso · ${ordinal(gameNo())}</div>
+      <div class="stat-card">
+        ${row(S.names[0], S.scores[0], 't0')}
+        ${row(S.names[1], S.scores[1], 't1')}
+        ${row('Anotaciones', S.rounds.length)}
+      </div>
+    </div>`;
+}
 
 /* ============================================================
    Acciones de juego
@@ -718,7 +871,7 @@ function recount() {
   S.rounds.forEach(r => { S.scores[r.t] += r.p; });
 
   let w = -1;
-  if (S.scores[0] >= TARGET || S.scores[1] >= TARGET) w = S.scores[0] >= S.scores[1] ? 0 : 1;
+  if (S.scores[0] >= S.target || S.scores[1] >= S.target) w = S.scores[0] >= S.scores[1] ? 0 : 1;
 
   if (w !== prev) {
     if (prev >= 0) S.games[prev] = Math.max(0, S.games[prev] - 1);
@@ -786,8 +939,17 @@ function paintPad() {
   const n = padTotal();
   $('#pad-entry').textContent = n;
   $('#pad-entry').classList.toggle('zero', n === 0);
-  // la capicúa es única por mano: el chip queda marcado en vez de sumar otra vez
-  $$('#chips button').forEach(b => b.classList.toggle('on', b.dataset.chip === 'capi' && padCapi()));
+  // capicúa: única, el chip solo queda marcado.
+  // pase corrido: se acumula, así que lleva la cuenta y su total en el chip.
+  const pn = padPase();
+  $$('#chips button').forEach(b => {
+    const isCapi = b.dataset.chip === 'capi';
+    b.classList.toggle('on', isCapi ? padCapi() : pn > 0);
+    if (!isCapi) {
+      $('.chip-n', b).textContent   = pn || '';
+      $('.chip-val', b).textContent = '+' + (pn || 1) * CHIP_PTS;
+    }
+  });
 }
 function padKey(k) {
   buzz(6);
@@ -847,9 +1009,25 @@ function ask(title, msg, okLabel = 'Sí', danger = false) {
 /* ============================================================
    Eventos
    ============================================================ */
-$$('[data-theme-toggle]').forEach(b => b.addEventListener('click', () => {
-  S.theme = S.theme === 'dark' ? 'light' : 'dark';
-  buzz(8); save(); render();
+// navegación entre tablero / ajustes / historial
+$$('[data-go]').forEach(b => b.addEventListener('click', () => {
+  buzz(8); view = b.dataset.go; render();
+}));
+
+// ---- ajustes ----
+function setTarget(v) {
+  S.target = Math.max(TARGET_MIN, Math.min(TARGET_MAX, v));
+  recount();            // puede cerrar la mano, o reabrirla si se sube el tope
+  save(); render();
+}
+$$('[data-step]').forEach(b => b.addEventListener('click', () => {
+  buzz(6); setTarget(S.target + +b.dataset.step);
+}));
+$$('[data-target]').forEach(b => b.addEventListener('click', () => {
+  buzz(8); setTarget(+b.dataset.target);
+}));
+$$('[data-set-theme]').forEach(b => b.addEventListener('click', () => {
+  S.theme = b.dataset.setTheme; buzz(8); save(); render();
 }));
 
 $$('[data-mode]').forEach(card => card.addEventListener('click', () => {
@@ -933,8 +1111,12 @@ document.addEventListener('keydown', e => {
 
   // ---- teclado cerrado: elegir a quién anotar ----
   if (!$('#sheet').classList.contains('on')) {
-    if (e.key === 'Escape') { menu.classList.remove('on'); return; }
-    if (!S.mode || S.over >= 0) return;
+    if (e.key === 'Escape') {
+      if (menu.classList.contains('on')) menu.classList.remove('on');
+      else if (view !== 'game') { view = 'game'; render(); }
+      return;
+    }
+    if (view !== 'game' || !S.mode || S.over >= 0) return;
     if (e.key === 'ArrowLeft')  { e.preventDefault(); buzz(10); openPad(0); }
     if (e.key === 'ArrowRight') { e.preventDefault(); buzz(10); openPad(1); }
     return;
