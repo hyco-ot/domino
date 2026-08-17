@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#f2efe7">
+<meta name="theme-color" content="#edf1f4">
 <title>Dominó</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon-192.png">
@@ -11,21 +11,25 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
-/* ---------- temas (claro / oscuro) ---------- */
+/* ---------- temas (claro / oscuro) ----------
+   Paleta tomada del logo de Signos Framework: superficies frías de pizarra,
+   acento verdeazul (#20b090) y el equipo 1 en el azul del logotipo.
+   El equipo 2 se queda cálido a propósito, para que sigan distinguiéndose
+   de un vistazo desde el otro lado de la mesa. */
 :root{
-  --bg:#f2efe7; --elev:#fffdf8; --sunk:#e6e2d6; --line:#d9d3c5;
-  --txt:#1a1c18; --dim:#6f6c60;
-  --a:#175f8d; --b:#a8471e;
-  --ok:#0f6b4f; --danger:#b3261e;
-  --ivory:#fbf8f1; --pip:#15170f; --edge:rgba(0,0,0,.20);
-  --shadow:0 1px 2px rgba(0,0,0,.05), 0 10px 28px rgba(0,0,0,.07);
+  --bg:#edf1f4; --elev:#ffffff; --sunk:#dfe6ec; --line:#ccd6de;
+  --txt:#1e2b36; --dim:#5f7280;
+  --a:#26648a; --b:#a8471e;
+  --ok:#14876b; --danger:#b3261e;
+  --ivory:#fbf8f1; --pip:#22323e; --edge:rgba(20,40,55,.22);
+  --shadow:0 1px 2px rgba(30,50,65,.06), 0 10px 28px rgba(30,50,65,.09);
   --on-solid:#fff;
 }
 [data-theme="dark"]{
-  --bg:#0e1210; --elev:#181d19; --sunk:#080a09; --line:#2a312b;
-  --txt:#ecebe3; --dim:#8d958b;
+  --bg:#131c23; --elev:#1c2730; --sunk:#0c1319; --line:#2b3a45;
+  --txt:#e7eef3; --dim:#849aa8;
   --a:#63aee2; --b:#e58a5c;
-  --ok:#3fbf90; --danger:#f2837b;
+  --ok:#3fc9a5; --danger:#f2837b;
   --ivory:#e7e3d8; --pip:#12140e; --edge:rgba(0,0,0,.45);
   --shadow:0 1px 2px rgba(0,0,0,.4), 0 14px 34px rgba(0,0,0,.5);
   --on-solid:#0c100d;
@@ -36,6 +40,7 @@
   --a:var(--txt); --b:var(--txt); --ok:var(--txt); --danger:var(--txt);
   --shadow:none;
 }
+[data-style="mono"] .t-line{stroke:var(--edge)}
 [data-style="mono"] .add{
   background:transparent; border:1.5px solid var(--txt); color:var(--txt); box-shadow:none;
 }
@@ -70,7 +75,8 @@ button{border:0;background:none;cursor:pointer}
 
 /* ---------- fichas de dominó (svg) ---------- */
 .t-face{fill:var(--ivory);stroke:var(--edge);stroke-width:2}
-.t-line{stroke:var(--edge);stroke-width:2.5;stroke-linecap:round}
+/* la divisoria toma el verdeazul del logo, igual que en el icono */
+.t-line{stroke:#20b090;stroke-width:2.5;stroke-linecap:round}
 .t-pip{fill:var(--pip)}
 
 /* ---------- pantalla: elegir modo ---------- */
@@ -109,11 +115,16 @@ button{border:0;background:none;cursor:pointer}
   min-width:0;min-height:0;padding:4px 6px 0}
 
 /* ---------- reacciones flotantes (solo estilo "Clásico") ---------- */
-.fx{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden;
+/* Sin overflow:hidden: la frase puede salirse de la columna del equipo.
+   Va centrada sobre su equipo y, si es larga, cruza por encima del centro. */
+.fx{position:absolute;inset:0;z-index:5;pointer-events:none;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
-.pop-word{font-size:clamp(19px,6.5vw,28px);font-weight:800;letter-spacing:-.02em;
-  color:var(--tc);white-space:nowrap;
-  text-shadow:0 0 12px var(--bg),0 0 5px var(--bg),0 2px 6px var(--bg);
+/* width:max-content la deja crecer más que la columna en vez de partirse;
+   max-width la corta solo cuando ya llenaría la pantalla entera. */
+.pop-word{width:max-content;max-width:92vw;
+  font-size:clamp(19px,6.5vw,28px);font-weight:800;letter-spacing:-.02em;line-height:1.08;
+  color:var(--tc);text-align:center;
+  text-shadow:0 0 12px var(--bg),0 0 6px var(--bg),0 0 3px var(--bg),0 2px 6px var(--bg);
   animation:floatup 1.9s cubic-bezier(.2,.7,.3,1) forwards}
 @keyframes floatup{
   0%  {opacity:0;transform:translateY(20px) scale(.75) rotate(-3deg)}
@@ -183,7 +194,9 @@ button{border:0;background:none;cursor:pointer}
 .menu{position:fixed;top:58px;right:12px;z-index:30;background:var(--elev);
   border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);
   padding:6px;min-width:222px;opacity:0;transform:translateY(-6px) scale(.97);
-  pointer-events:none;transition:.16s ease}
+  pointer-events:none;transition:.16s ease;
+  max-height:calc(100vh - 76px);overflow-y:auto;scrollbar-width:none}
+.menu::-webkit-scrollbar{display:none}
 .menu.on{opacity:1;transform:none;pointer-events:auto}
 .menu .lbl{padding:8px 13px 5px;font-size:10.5px;font-weight:700;letter-spacing:.14em;
   text-transform:uppercase;color:var(--dim)}
@@ -199,8 +212,9 @@ button{border:0;background:none;cursor:pointer}
 /* reacción a pantalla completa: se ve el tablero por debajo */
 .fxfull{position:fixed;inset:0;z-index:45;pointer-events:none;padding:16px;
   display:flex;align-items:center;justify-content:center}
-.big-word{font-size:clamp(46px,19vw,150px);font-weight:800;letter-spacing:-.045em;
-  color:var(--wc);white-space:nowrap;text-align:center;
+.big-word{max-width:100%;
+  font-size:clamp(46px,19vw,150px);font-weight:800;letter-spacing:-.045em;line-height:1.02;
+  color:var(--wc);text-align:center;
   text-shadow:0 0 34px var(--bg),0 0 16px var(--bg),0 0 7px var(--bg),0 5px 18px var(--bg);
   animation:bigpop 2.6s cubic-bezier(.2,.8,.3,1) forwards}
 @keyframes bigpop{
@@ -468,6 +482,9 @@ const REACTIONS = {
 const BIG_PTS = 45;    // más de esto en una sola anotación ya es abuso
 const HUGE_PTS = 80;
 
+// color de la barra de estado del móvil según el tema
+const BAR_COLOR = { light: '#edf1f4', dark: '#131c23' };
+
 /* ============================================================
    Fichas de dominó en SVG
    ============================================================ */
@@ -590,7 +607,7 @@ function render() {
   const root = document.documentElement;
   root.dataset.theme = S.theme;
   root.dataset.style = S.style;
-  $('meta[name=theme-color]').content = S.theme === 'dark' ? '#0e1210' : '#f2efe7';
+  $('meta[name=theme-color]').content = BAR_COLOR[S.theme];
   $$('[data-theme-toggle]').forEach(b => b.innerHTML = S.theme === 'dark' ? sunIcon() : moonIcon());
   $$('[data-set-style]').forEach(b => b.setAttribute('aria-checked', b.dataset.setStyle === S.style));
 
@@ -785,16 +802,22 @@ function padKey(k) {
   paintPad();
 }
 
-$('#chips').addEventListener('click', e => {
-  const b = e.target.closest('[data-chip]'); if (!b) return;
+// un atajo, lo pulse el dedo o el teclado
+function chipTap(kind) {
+  if (S.style !== 'classic') return;      // en "Simple" no hay atajos
   buzz(6);
-  if (b.dataset.chip === 'capi') {
+  if (kind === 'capi') {
     const i = padOps.findIndex(o => o.k === 'capi');
     if (i >= 0) padOps.splice(i, 1); else padOps.push({ k: 'capi' });   // conmuta
   } else {
     padOps.push({ k: 'pase' });                                          // sí acumula
   }
   paintPad();
+}
+
+$('#chips').addEventListener('click', e => {
+  const b = e.target.closest('[data-chip]'); if (!b) return;
+  chipTap(b.dataset.chip);
 });
 $('#pad').addEventListener('click', e => {
   const b = e.target.closest('[data-k]'); if (!b) return;
@@ -887,6 +910,46 @@ menu.addEventListener('click', async e => {
 $('#scrim').addEventListener('click', closePad);
 $('#win-new').addEventListener('click', () => { buzz(12); newGame(); });
 $('#win-close').addEventListener('click', () => { winSeen = true; render(); });
+
+/* ============================================================
+   Teclado físico (para cuando se usa en la computadora)
+   ============================================================ */
+document.addEventListener('keydown', e => {
+  // mientras se renombra un equipo el teclado es suyo
+  if (e.target.tagName === 'INPUT') return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+  // diálogo de confirmación delante: Enter acepta, Esc cancela
+  if ($('#ask').classList.contains('on')) {
+    if (e.key === 'Enter')  { e.preventDefault(); $('#ask-yes').click(); }
+    if (e.key === 'Escape') { e.preventDefault(); $('#ask-no').click(); }
+    return;
+  }
+  // pantalla de resultado delante
+  if ($('#win').classList.contains('on')) {
+    if (e.key === 'Escape') { e.preventDefault(); winSeen = true; render(); }
+    return;
+  }
+
+  // ---- teclado cerrado: elegir a quién anotar ----
+  if (!$('#sheet').classList.contains('on')) {
+    if (e.key === 'Escape') { menu.classList.remove('on'); return; }
+    if (!S.mode || S.over >= 0) return;
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); buzz(10); openPad(0); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); buzz(10); openPad(1); }
+    return;
+  }
+
+  // ---- teclado abierto: números, atajos y Enter ----
+  if (e.key >= '0' && e.key <= '9') { e.preventDefault(); padKey(e.key); return; }
+  switch (e.key) {
+    case 'Enter':                 e.preventDefault(); padKey('ok');   break;
+    case 'Backspace': case 'Delete': e.preventDefault(); padKey('del'); break;
+    case 'Escape':                e.preventDefault(); closePad();     break;
+    case 'p': case 'P':           e.preventDefault(); chipTap('pase'); break;
+    case 'c': case 'C':           e.preventDefault(); chipTap('capi'); break;
+  }
+});
 
 /* ============================================================
    Ciclo de vida
