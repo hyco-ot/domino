@@ -418,6 +418,8 @@ button{border:0;background:none;cursor:pointer}
   border-radius:14px;padding:11px 16px;font-size:13.5px;font-weight:600;
   box-shadow:var(--shadow);animation:toastin .3s ease}
 .toast[hidden]{display:none}
+.toast i{display:block;font-style:normal;font-size:11px;font-weight:500;
+  color:var(--dim);margin-top:3px}
 @keyframes toastin{from{opacity:0;transform:translate(-50%,12px)}}
 
 /* ---------- capas ---------- */
@@ -961,13 +963,32 @@ function save() {
 // los nombres congelados de una mano del historial.
 const teamName = (i, names = S.names) => (names && names[i] || '').trim() || DEFAULT_NAMES[i];
 
-let toastTimer = 0;
-function toast(txt, ms = 4500) {
+/* El aviso no se va solo: se queda hasta que se toque la pantalla. Antes duraba
+   4,5 s y era fácil perdérselo si el teléfono estaba en la mesa. */
+let toastId = 0, toastQuita = null;
+function toast(txt) {
   const t = $('#toast');
+  if (toastQuita) toastQuita();
+  const mio = ++toastId;
+
   t.textContent = txt;
+  const pista = document.createElement('i');
+  pista.textContent = 'Toca para cerrar';
+  t.appendChild(pista);
   t.hidden = false;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, ms);
+
+  const cerrar = () => { t.hidden = true; if (toastQuita) toastQuita(); };
+  toastQuita = () => {
+    document.removeEventListener('pointerdown', cerrar, true);
+    document.removeEventListener('keydown', cerrar, true);
+    toastQuita = null;
+  };
+  // en el siguiente tick: si no, el mismo gesto que lo abrió lo cerraría
+  setTimeout(() => {
+    if (mio !== toastId) return;      // otro aviso lo reemplazó mientras tanto
+    document.addEventListener('pointerdown', cerrar, true);
+    document.addEventListener('keydown', cerrar, true);
+  });
 }
 
 const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
