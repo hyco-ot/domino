@@ -1,0 +1,77 @@
+# Solo revisa. NO publica.
+#
+# GitHub Pages ya publica solo desde la rama main (modo "legacy"), y como VERSION
+# se sube a mano en sw.js, cada publicación cambia de bytes sin que haga falta
+# estamparla aquí. Meter un despliegue en este archivo obligaría a cambiar el
+# origen de Pages a "GitHub Actions", y romper algo que ya funciona no compensa.
+#
+# Lo que sí aporta: cazar los cuatro fallos que no dan la cara solos.
+
+name: Revisar
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2          # hace falta para comparar con el commit anterior
+
+      # Todo el código de la app vive dentro de index.html, así que un paréntesis
+      # suelto no lo ve nadie hasta que sale la pantalla en blanco en un teléfono.
+      - name: Sintaxis del JavaScript
+        run: |
+          node -e "
+            const fs = require('fs');
+            const html = fs.readFileSync('index.html', 'utf8');
+            const bloques = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+            if (!bloques.length) { console.error('No hay ningún <script> en index.html'); process.exit(1); }
+            fs.writeFileSync('/tmp/app.js', bloques.map(b => b[1]).join('\n;\n'));
+            console.log('Bloques de script: ' + bloques.length);
+          "
+          node --check /tmp/app.js
+          node --check sw.js
+
+      # Si esto no es JSON válido, el teléfono no instala la app.
+      - name: Manifest válido
+        run: node -e "JSON.parse(require('fs').readFileSync('manifest.webmanifest','utf8')); console.log('manifest ok')"
+
+      # Si un archivo de ASSETS no existe, addAll() falla, la instalación del
+      # service worker se cae entera y la actualización no entra nunca. Callado.
+      - name: Los archivos de ASSETS existen
+        run: |
+          node -e "
+            const fs = require('fs');
+            const m = fs.readFileSync('sw.js', 'utf8').match(/const ASSETS = \[([\s\S]*?)\]/);
+            if (!m) { console.error('No se encontró ASSETS en sw.js'); process.exit(1); }
+            const rutas = [...m[1].matchAll(/'([^']+)'/g)].map(x => x[1]).filter(r => r !== './');
+            const faltan = rutas.filter(r => !fs.existsSync(r));
+            faltan.forEach(r => console.error('Falta: ' + r));
+            if (faltan.length) process.exit(1);
+            console.log('Los ' + rutas.length + ' archivos de ASSETS están.');
+          "
+
+      # El que más duele: publicar sin subir VERSION. No falla en ningún sitio,
+      # simplemente la publicación no le llega a ningún teléfono instalado.
+      - name: VERSION subió
+        run: |
+          ver() { grep -oP "const VERSION = '\K[^']+" "$1"; }
+          NUEVA=$(ver sw.js)
+          if ! git show HEAD~1:sw.js > /tmp/sw-anterior.js 2>/dev/null; then
+            echo "No hay commit anterior con el que comparar."; exit 0
+          fi
+          VIEJA=$(ver /tmp/sw-anterior.js)
+          echo "VERSION anterior: $VIEJA  ->  nueva: $NUEVA"
+          if [ "$VIEJA" = "$NUEVA" ] && ! git diff --quiet HEAD~1 HEAD -- index.html; then
+            echo "::error::index.html cambió pero VERSION sigue en $NUEVA. Los teléfonos ya instalados NO verían esta publicación. Sube VERSION en sw.js."
+            exit 1
+          fi
