@@ -257,6 +257,9 @@ button{border:0;background:none;cursor:pointer}
   padding:12px 16px;border-radius:14px;border:1px solid var(--danger);
   font-size:14px;font-weight:600;color:var(--danger)}
 .wipe:active{background:var(--sunk)}
+/* borrar solo el historial pesa menos: se queda en gris, el rojo es del reseteo */
+.wipe.soft{border-color:var(--line);color:var(--dim)}
+.cfg-hint + .wipe{margin-top:16px}
 .wipe svg{width:17px;height:17px;flex:0 0 auto;fill:none;stroke:currentColor;
   stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 
@@ -268,6 +271,27 @@ button{border:0;background:none;cursor:pointer}
 .stat-row .v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
 .stat-row .v.t0{color:var(--a)} .stat-row .v.t1{color:var(--b)}
 .stat-empty{text-align:center;color:var(--dim);font-size:13.5px;line-height:1.5;padding:26px 6px}
+/* la ficha del modo: sustituye a escribir "Dominicano" o "Cubano" */
+.hficha svg{height:17px;width:auto;display:block}
+.hmode{display:flex;align-items:center;gap:6px}
+
+/* vista "lista": una mano por línea, apretada */
+.hrow.lista{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;
+  gap:9px;padding:9px 0}
+.hrow.lista .hpts{font-size:16px}
+.hwin{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hwin.t0{color:var(--a)} .hwin.t1{color:var(--b)}
+.hwhen{font-size:11px;color:var(--dim);white-space:nowrap}
+
+/* vista "pastillas": dos por línea */
+.hpills{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.hcard{background:var(--elev);border:1px solid var(--line);border-radius:16px;
+  padding:11px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.hcard .htop{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim)}
+.hcard .hpts{font-size:19px}
+.hcard .hwin{max-width:100%}
+
 /* una mano guardada */
 .hrow{padding:12px 0}
 .hrow:first-child{padding-top:2px}
@@ -585,11 +609,17 @@ button{border:0;background:none;cursor:pointer}
 
       <div>
         <div class="cfg-lbl">Zona de peligro</div>
+        <button class="wipe soft" id="btn-wipe-hist">
+          <svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V4M16 20v-6M21 20H3"/></svg>
+          Limpiar historial
+        </button>
+        <p class="cfg-hint">Borra solo las manos guardadas. Los puntos de la partida
+          en curso, los nombres y los ajustes se quedan como están.</p>
         <button class="wipe" id="btn-wipe">
           <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>
-          Limpiar todo
+          Resetear la app
         </button>
-        <p class="cfg-hint">Borra los puntos, los nombres y todo el historial de manos.
+        <p class="cfg-hint">La deja como recién instalada: puntos, nombres e historial.
           No se puede deshacer.</p>
       </div>
     </div>
@@ -743,6 +773,7 @@ function tileSVG(top, bottom) {
 const blank = () => ({
   theme:  matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
   style:  'chercha',   // 'chercha' (con vacilada) | 'mono' (Clásico, pelado)
+  histView: 'detalle', // cómo se listan las manos: 'detalle' | 'lista' | 'pastillas'
   target: 200,         // puntos para ganar la mano; al elegir modo lo pisa MODES[].target
   mode:   null,        // 'dom' | 'cub'
   names:  [...DEFAULT_NAMES],
@@ -801,10 +832,20 @@ function react(team, text) {
 // lisa: cualquiera de los dos gana dejando al otro en cero
 const isLisa = () => S.over >= 0 && S.scores[1 - S.over] === 0;
 
-// Regla de la casa: a 30 o menos de ganar, capicúa y pase corrido dejan de sumar
-// (si no, se ganaría con el atajo). El umbral va atado a CHIP_PTS, que es lo que
-// valen: a 200 se apagan en 170.
-const chipsDead = team => S.scores[team] >= S.target - CHIP_PTS;
+/* Regla de la casa: el atajo nunca puede ser lo que cruza la meta. Vale mientras
+   después de sumarlo todavía falte para ganar; el que llegaría al tope, o lo
+   pasaría, ya no cuenta.
+
+   A 200 eso da: en 170 no cabe ninguno (llegaría justo), en 140 cabe uno (170)
+   pero no dos (200). Los puntos de la mano entran en la cuenta: con 146 y una
+   mano de 15 vamos por 161, así que cabe uno (191) y no dos (221) — porque
+   ganar tiene que salir de la mano, no del atajo. Y si la mano ya gana sola,
+   los atajos son de adorno y no estorban. */
+function bonusCap(team, base) {
+  const falta = S.target - (S.scores[team] + base);
+  if (falta <= 0) return Infinity;                    // ya ganó con la mano
+  return Math.max(0, Math.ceil(falta / CHIP_PTS) - 1);
+}
 
 // reacción a pantalla completa, por encima del tablero pero sin taparlo del todo.
 // Sale por encima del teclado de puntos, así que sirve para avisar con él abierto.
@@ -984,6 +1025,42 @@ const fmtWhen = ts => {
   } catch { return d.toLocaleString(); }
 };
 
+// El modo ya no se escribe: se pinta su ficha, igual que en la barra del tablero.
+const HVIEWS = [['detalle','Detalle'], ['lista','Lista'], ['pastillas','Pastillas']];
+const marcador = r =>
+  `<span class="hpts"><b class="t0">${r.scores[0]}</b><span class="d">—</span><b class="t1">${r.scores[1]}</b></span>`;
+
+function manoHTML(r, vista) {
+  const m = MODES[r.mode];
+  const ficha = m ? `<span class="hficha">${tileSVG(m.pips, m.pips)}</span>` : '';
+  const n0 = teamName(0, r.names), n1 = teamName(1, r.names);
+
+  if (vista === 'lista') {
+    return `<div class="hrow lista">
+      ${ficha}${marcador(r)}
+      <span class="hwin t${r.w}">${r.w === 0 ? n0 : n1}</span>
+      <span class="hwhen">${fmtWhen(r.ts)}</span>
+    </div>`;
+  }
+  if (vista === 'pastillas') {
+    return `<div class="hcard">
+      <span class="htop">${ficha}<span>${r.target}</span></span>
+      ${marcador(r)}
+      <span class="hwin t${r.w}">${r.w === 0 ? n0 : n1}</span>
+      <span class="hwhen">${fmtWhen(r.ts)}</span>
+    </div>`;
+  }
+  return `<div class="hrow">
+    <div class="hmeta"><span>${fmtWhen(r.ts)}</span>
+      <span class="hmode">${ficha}<span>${r.target}</span></span></div>
+    <div class="hline">
+      <span class="hteam${r.w === 0 ? ' win' : ''}">${n0}</span>
+      ${marcador(r)}
+      <span class="hteam${r.w === 1 ? ' win' : ''}">${n1}</span>
+    </div>
+  </div>`;
+}
+
 function renderStats() {
   const h = S.history;
   if (!h.length) {
@@ -991,22 +1068,26 @@ function renderStats() {
       Solo se guardan las que llegan al tope de puntos.</p>`;
     return;
   }
+  const vista = S.histView || 'detalle';
   const wins = [h.filter(r => r.w === 0).length, h.filter(r => r.w === 1).length];
   const row = (k, v, cls = '') => `<div class="stat-row"><span class="k">${k}</span><span class="v ${cls}">${v}</span></div>`;
 
-  const lista = h.slice().reverse().map(r => {
-    const modo = MODES[r.mode] ? MODES[r.mode].label : '';
-    return `<div class="hrow">
-      <div class="hmeta"><span>${fmtWhen(r.ts)}</span><span>${modo} · ${r.target}</span></div>
-      <div class="hline">
-        <span class="hteam${r.w === 0 ? ' win' : ''}">${teamName(0, r.names)}</span>
-        <span class="hpts"><b class="t0">${r.scores[0]}</b><span class="d">—</span><b class="t1">${r.scores[1]}</b></span>
-        <span class="hteam${r.w === 1 ? ' win' : ''}">${teamName(1, r.names)}</span>
-      </div>
-    </div>`;
-  }).join('');
+  const manos = h.slice().reverse().map(r => manoHTML(r, vista)).join('');
+  // las pastillas van sueltas en rejilla; las otras dos, dentro de una tarjeta
+  const lista = vista === 'pastillas'
+    ? `<div class="hpills">${manos}</div>`
+    : `<div class="stat-card">${manos}</div>`;
 
+  // El resumen se va al final: lo que se viene a ver son las manos.
   $('#stats-body').innerHTML = `
+    <div>
+      <div class="cfg-lbl">Manos · de la más reciente</div>
+      <div class="seg">
+        ${HVIEWS.map(([k, txt]) =>
+          `<button data-hview="${k}" aria-checked="${k === vista}">${txt}</button>`).join('')}
+      </div>
+      <div style="margin-top:12px">${lista}</div>
+    </div>
     <div>
       <div class="cfg-lbl">Resumen</div>
       <div class="stat-card">
@@ -1014,10 +1095,6 @@ function renderStats() {
         ${row(teamName(0), wins[0], 't0')}
         ${row(teamName(1), wins[1], 't1')}
       </div>
-    </div>
-    <div>
-      <div class="cfg-lbl">Manos · de la más reciente</div>
-      <div class="stat-card">${lista}</div>
     </div>`;
 }
 
@@ -1092,7 +1169,24 @@ let padTeam = 0, padOps = [];
 const padDigits = () => padOps.filter(o => o.k === 'd').map(o => o.v).join('');
 const padPase   = () => padOps.filter(o => o.k === 'pase').length;
 const padCapi   = () => padOps.some(o => o.k === 'capi');
-const padTotal  = () => (+padDigits() || 0) + (padPase() + (padCapi() ? 1 : 0)) * CHIP_PTS;
+const padBase   = () => +padDigits() || 0;
+const padBonus  = () => padPase() + (padCapi() ? 1 : 0);
+const padTotal  = () => padBase() + padBonus() * CHIP_PTS;
+// ¿ya no cabe ni uno más? Vale para pintarlos apagados y para frenar el toque.
+const chipsFull = () => padBonus() >= bonusCap(padTeam, padBase());
+
+/* Subir los puntos de la mano puede dejar sin sitio a atajos ya marcados: con
+   100 y un pase corrido caben tres, pero al teclear 80 la mano sola se pone en
+   180 y ya no cabe ninguno. Se quitan los últimos marcados, no los primeros. */
+function trimBonus() {
+  const cap = bonusCap(padTeam, padBase());
+  let usados = padBonus();
+  if (usados <= cap) return false;
+  for (let i = padOps.length - 1; i >= 0 && usados > cap; i--) {
+    if (padOps[i].k === 'pase' || padOps[i].k === 'capi') { padOps.splice(i, 1); usados--; }
+  }
+  return true;
+}
 
 function openPad(team) {
   padTeam = team; padOps = [];
@@ -1115,7 +1209,7 @@ function paintPad() {
   $('#pad-entry').classList.toggle('zero', n === 0);
   // capicúa: única, el chip solo queda marcado.
   // pase corrido: se acumula, así que lleva la cuenta y su total en el chip.
-  const pn = padPase(), dead = chipsDead(padTeam);
+  const pn = padPase(), dead = chipsFull();
   $$('#chips button').forEach(b => {
     const isCapi = b.dataset.chip === 'capi';
     b.classList.toggle('dead', dead);
@@ -1130,19 +1224,26 @@ function padKey(k) {
   buzz(6);
   if (k === 'del') padOps.pop();
   else if (k === 'ok') {
+    trimBonus();                    // por si el último dígito los dejó sin sitio
     const n = padTotal(), pase = padPase(), capi = padCapi();
     closePad();
     if (n > 0) addRound(padTeam, n, pase, capi);
     return;
   }
-  else if (padDigits().length < 3) padOps.push({ k: 'd', v: k });
+  else if (padDigits().length < 3) {
+    padOps.push({ k: 'd', v: k });
+    // el dígito nuevo puede haber dejado sin sitio a los atajos ya marcados
+    if (trimBonus()) { buzz([16, 55, 16]); bigReact(pick(REACTIONS.dead), padTeam); }
+  }
   paintPad();
 }
 
 // un atajo, lo pulse el dedo o el teclado
 function chipTap(kind) {
   if (S.style !== 'chercha') return;      // en "Clásico" no hay atajos
-  if (chipsDead(padTeam)) {               // ya no les sirven: se avisa y no suma
+  // destildar la capicúa siempre se puede: quitar nunca rompe la regla
+  const quitando = kind === 'capi' && padCapi();
+  if (!quitando && chipsFull()) {         // ya no cabe otro: se avisa y no suma
     buzz([16, 55, 16]);
     bigReact(pick(REACTIONS.dead), padTeam);
     return;
@@ -1254,6 +1355,12 @@ $('#board').addEventListener('click', e => {
 
 $('#btn-result').addEventListener('click', () => { buzz(10); winSeen = false; render(); });
 
+// el selector de vista se repinta con la lista, así que va por delegación
+$('#stats-body').addEventListener('click', e => {
+  const b = e.target.closest('[data-hview]'); if (!b) return;
+  buzz(8); S.histView = b.dataset.hview; save(); render();
+});
+
 const menu = $('#menu');
 $('#btn-menu').addEventListener('click', e => { e.stopPropagation(); menu.classList.toggle('on'); });
 document.addEventListener('click', () => menu.classList.remove('on'));
@@ -1275,10 +1382,18 @@ async function doAct(act) {
           'Cambiar', false, 'Sí, reiniciar la partida')) return;
     newGame(); S.mode = null; save(); render();
   }
+  if (act === 'hist') {
+    if (!S.history.length) return;      // no hay nada que borrar
+    if (!await ask('Limpiar historial',
+        `Se borran las ${S.history.length} manos guardadas. La partida en curso y los nombres no se tocan.`,
+        'Limpiar', true, 'Sí, sé que no se puede deshacer')) return;
+    S.history = [];
+    save(); render();
+  }
   if (act === 'reset') {
-    if (!await ask('Borrar todo',
+    if (!await ask('Resetear la app',
         'Se borran los puntos, los nombres y todo el historial de manos.',
-        'Borrar', true, 'Sí, sé que no se puede deshacer')) return;
+        'Resetear', true, 'Sí, sé que no se puede deshacer')) return;
     const { theme, style } = S;
     S = blank(); S.theme = theme; S.style = style;
     winSeen = false;
@@ -1296,6 +1411,7 @@ menu.addEventListener('click', e => {
 });
 
 $('#btn-wipe').addEventListener('click', () => { buzz(10); doAct('reset'); });
+$('#btn-wipe-hist').addEventListener('click', () => { buzz(10); doAct('hist'); });
 
 $('#scrim').addEventListener('click', closePad);
 $('#win-new').addEventListener('click', () => { buzz(12); newGame(); });

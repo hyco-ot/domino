@@ -88,13 +88,26 @@ The `mono` style is not just a palette: it disables functionality. The reactions
 
 `tileSVG(top, bottom)` builds a tile from `LAYOUT`, a 3×3 grid of pip positions per number (0–9). It's used in the mode cards, the badge, the capicúa chip, the entry log, and the winner screen. The pip count comes from `MODES[S.mode].pips`.
 
-### House rule: shortcuts die near the finish line
+### House rule: a bonus can never be what crosses the finish line
 
-A real domino rule, not a UI decision: **when a team needs `CHIP_PTS` (30) or fewer points to win, capicúa and pase corrido stop counting** — otherwise you'd win off a bonus. `chipsDead(team)` ([index.html:712](index.html#L712)) is `S.scores[team] >= S.target - CHIP_PTS`, so at a 200 target the shortcuts go dead at 170.
+A real domino rule, not a UI decision. A shortcut (capicúa, pase corrido) counts only while, after adding it, you still need more to win. `bonusCap(team, base)` returns how many fit:
 
-The threshold is deliberately tied to `CHIP_PTS` rather than a hardcoded 30, since the rule is "you can't win *on* the bonus" — change what a bonus is worth and the cutoff must follow.
+```js
+const falta = S.target - (S.scores[team] + base);
+if (falta <= 0) return Infinity;              // the hand already won on its own
+return Math.max(0, Math.ceil(falta / CHIP_PTS) - 1);
+```
 
-Enforced in `chipTap()`, which is the single funnel for both the on-screen chips and the `p`/`c` keyboard shortcuts. A blocked tap fires the `REACTIONS.dead` phrase instead of adding points. `paintPad()` also marks the chips with a `dead` class (dimmed, value struck through) so the rule is visible before it's hit.
+**The hand's own points are part of the calculation** — that's the subtle half. At 146 with 15 scored this hand you're effectively at 161, so one bonus fits (191) but not two (221): the win has to come out of the hand, not the bonus. Once the hand wins by itself, bonuses are decoration and are allowed freely.
+
+At a 200 target this yields: 6 bonuses from zero, 3 at 100, 1 at 140, none at 170.
+
+Two enforcement points, and **both are needed**:
+
+- `chipTap()` refuses a tap when `chipsFull()` — the single funnel for on-screen chips and the `p`/`c` keys. Un-ticking a capicúa is always allowed; removing can't break the rule.
+- `trimBonus()` drops already-marked bonuses when a *digit* makes them illegal. Without it, marking a bonus at 100 (3 fit) and then typing 80 would leave an entry that wins on the bonus. Called on every digit and again on submit.
+
+`paintPad()` marks chips `dead` (dimmed, value struck through) when none fit, so the limit is visible before it's hit.
 
 ### Score pad: a list of operations
 
