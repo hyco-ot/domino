@@ -12,7 +12,7 @@
    le manda SKIP_WAITING, que es lo que dispara el botón "Actualizar". Así nunca
    se mezcla una página vieja ya cargada con archivos de la versión nueva. */
 
-const VERSION = '1.00';               // +1 por cada cambio suelto
+const VERSION = '1.01';               // +1 por cada cambio suelto
 const CACHE   = `domino-${VERSION}`;  // caché propia por versión
 const ASSETS = [
   './',

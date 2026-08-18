@@ -576,9 +576,9 @@ button{border:0;background:none;cursor:pointer}
       <div>
         <div class="cfg-lbl">Actualizaciones</div>
         <button class="upd"></button>
-        <p class="cfg-hint">La app se guarda en el teléfono para abrir sin internet.
-          Al actualizar entra la versión nueva y se descarta la guardada. Los puntos,
-          los nombres y el historial no se tocan.</p>
+        <p class="cfg-hint">La app se actualiza sola: cuando hay versión nueva entra
+          en el primer momento en que no estés anotando. Este botón es por si quieres
+          comprobarlo o adelantarlo. Los puntos, los nombres y el historial no se tocan.</p>
         <button class="linky" id="btn-hard">¿Sigue sin actualizar? Reinstalar</button>
         <p class="cfg-hint" id="upd-ver"></p>
       </div>
@@ -1355,12 +1355,19 @@ document.addEventListener('keydown', e => {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   checkIdle();
-  // De paso mira si hay versión nueva, calladito: si la hay, el botón de
-  // Ajustes se pone verde solo. Una PWA instalada casi no navega, así que si
-  // no se pide a mano el navegador puede tardar días en enterarse.
-  if (swReg) swReg.update().catch(() => {});
+  if (!swReg) return;
+  // Volver a la app es el momento tranquilo por excelencia: si había una versión
+  // esperando, entra aquí. Si no había, se aprovecha para mirar si ya hay.
+  if (autoApply()) return;
+  swReg.update().catch(() => {});
 });
 setInterval(checkIdle, 60 * 1000);   // también si la app queda abierta pero sin usar
+
+// Una PWA instalada casi no navega, así que el navegador puede tardar días en
+// mirar por su cuenta. Con la app abierta se pregunta cada cuarto de hora.
+setInterval(() => {
+  if (swReg && document.visibilityState === 'visible') swReg.update().catch(() => {});
+}, 15 * 60 * 1000);
 
 // mantener la pantalla encendida mientras se juega
 (async () => {
@@ -1428,6 +1435,23 @@ function paintUpd() {
     b.disabled  = updState === 'busy';
     b.innerHTML = `${UPD_ICON[updState]}<span>${UPD_TEXT[updState]}</span>`;
   });
+}
+
+/* La versión nueva entra sola, pero no de cualquier manera: aplicarla recarga la
+   página, y hacerlo a media anotación es una groserÍa. Se espera al primer
+   momento tranquilo. Todo lo anotado sobrevive igual (save() corre en cada
+   cambio), lo que se protege aquí es no interrumpir.
+
+   Devuelve true si la lanzó, para no encadenar otra comprobación encima. */
+function autoApply() {
+  if (!swReg || !swReg.waiting) return false;
+  if ($('#sheet').classList.contains('on')) return false;  // anotando puntos
+  if ($('#ask').classList.contains('on'))   return false;  // decidiendo algo
+  if (S.over >= 0) return false;   // mano ganada a la vista: al recargar
+                                   // reaparecería la pantalla de ganador
+  applying = true;
+  swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
+  return true;
 }
 
 // Un toque: si ya hay versión esperando la aplica, si no, busca.
@@ -1507,12 +1531,15 @@ if ('serviceWorker' in navigator) {
       const reg = await navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' });
       swReg = reg;
       // sin controller es la primera instalación, no una actualización
-      if (reg.waiting && navigator.serviceWorker.controller) setUpd('ready');
+      if (reg.waiting && navigator.serviceWorker.controller) { setUpd('ready'); autoApply(); }
       reg.addEventListener('updatefound', () => {
         const nw = reg.installing;
         if (!nw) return;
         nw.addEventListener('statechange', () => {
-          if (nw.state === 'installed' && navigator.serviceWorker.controller) setUpd('ready');
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            setUpd('ready');
+            autoApply();     // si es buen momento, entra sin que nadie la pida
+          }
         });
       });
     } catch {}
