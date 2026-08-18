@@ -41,8 +41,11 @@
 
 /* ---------- estilo "Clásico" (clave interna: mono): todo monocromático ----------
    Es el dominó pelado: sin reacciones, sin atajos y sin color de equipo. */
+/* --a y --b se quedan fuera: los equipos conservan su color elegido también
+   aquí. Lo que se apaga es el color "de sistema" (verdes de confirmación,
+   rojos de peligro) y los adornos. */
 [data-style="mono"]{
-  --a:var(--txt); --b:var(--txt); --ok:var(--txt); --danger:var(--txt);
+  --ok:var(--txt); --danger:var(--txt);
   --shadow:none;
 }
 /* la divisoria va del color de los puntos: --edge es casi invisible sobre la
@@ -114,12 +117,9 @@ button{border:0;background:none;cursor:pointer}
 .badge svg{height:26px;width:auto}
 .badge .appname{font-size:17px;font-weight:800;letter-spacing:-.02em;color:var(--txt)}
 .badge .appname span{color:var(--ok)}
-/* Solo la barra del tablero va en rejilla: la columna del medio deja la ficha y
-   el tope centrados en pantalla, justo encima del ordinal de la partida. Las
-   demás pantallas siguen con la barra en fila y su título a la izquierda. */
-#sc-game .top{display:grid;grid-template-columns:1fr auto 1fr}
-#sc-game .badge{grid-column:2}
-#sc-game #btn-menu{grid-column:3;justify-self:end}
+/* Título a la izquierda y menú a la derecha: con un solo botón al otro lado,
+   centrar el título dejaba la barra descompensada. */
+#sc-game .badge{margin-right:auto}
 
 /* contador de partida de la sesión */
 .gamebar{display:flex;align-items:center;gap:12px;padding:2px 20px 8px}
@@ -208,8 +208,9 @@ button{border:0;background:none;cursor:pointer}
 .del-x svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
 
 /* ---------- pie: ajustes · resultado · historial ---------- */
-.foot{display:flex;justify-content:space-between;align-items:center;gap:6px;
+.foot{display:flex;justify-content:center;align-items:center;gap:6px;
   border-top:1px solid var(--line);padding:6px 8px 10px}
+.foot[hidden]{display:none}
 .foot-btn{display:flex;align-items:center;gap:7px;padding:10px 13px;border-radius:12px;
   font-size:12.5px;font-weight:600;color:var(--dim)}
 .foot-btn:active{background:var(--sunk)}
@@ -389,6 +390,15 @@ button{border:0;background:none;cursor:pointer}
   68% {opacity:1;transform:scale(1)    rotate(-5deg)}
   100%{opacity:0;transform:scale(1.3)  rotate(-5deg)}
 }
+
+/* aviso breve abajo; por encima del tablero pero por debajo de los diálogos */
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));
+  transform:translateX(-50%);z-index:19;max-width:88vw;text-align:center;
+  background:var(--elev);border:1px solid var(--ok);color:var(--txt);
+  border-radius:14px;padding:11px 16px;font-size:13.5px;font-weight:600;
+  box-shadow:var(--shadow);animation:toastin .3s ease}
+.toast[hidden]{display:none}
+@keyframes toastin{from{opacity:0;transform:translate(-50%,12px)}}
 
 /* ---------- capas ---------- */
 /* touch-action:none para que arrastrar sobre el teclado o sobre la capa oscura
@@ -602,18 +612,12 @@ button{border:0;background:none;cursor:pointer}
       </div>
     </div>
 
-    <div class="foot">
-      <button class="foot-btn" data-go="config">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1"/><path d="M19.1 14.6a1.5 1.5 0 0 0 .3 1.7l.1.1a1.9 1.9 0 1 1-2.7 2.7l-.1-.1a1.5 1.5 0 0 0-2.6 1.1v.2a1.9 1.9 0 1 1-3.8 0v-.1a1.5 1.5 0 0 0-2.6-1.2l-.1.1a1.9 1.9 0 1 1-2.7-2.7l.1-.1a1.5 1.5 0 0 0-1.1-2.6h-.2a1.9 1.9 0 1 1 0-3.8h.1a1.5 1.5 0 0 0 1.2-2.6l-.1-.1a1.9 1.9 0 1 1 2.7-2.7l.1.1a1.5 1.5 0 0 0 2.6-1.1v-.2a1.9 1.9 0 1 1 3.8 0v.1a1.5 1.5 0 0 0 2.6 1.2l.1-.1a1.9 1.9 0 1 1 2.7 2.7l-.1.1a1.5 1.5 0 0 0 1.1 2.6h.2a1.9 1.9 0 1 1 0 3.8h-.1a1.5 1.5 0 0 0-1.4.9z"/></svg>
-        Ajustes
-      </button>
+    <!-- Ajustes e Historial se fueron al menú de los tres puntos. Aquí solo
+         queda el acceso al resultado, y el pie entero se oculta si no toca. -->
+    <div class="foot" id="foot">
       <button class="result" id="btn-result" hidden>
         Revisar la mano
         <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-      </button>
-      <button class="foot-btn" data-go="stats">
-        Historial
-        <svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V4M16 20v-6M21 20H3"/></svg>
       </button>
     </div>
   </section>
@@ -662,7 +666,7 @@ button{border:0;background:none;cursor:pointer}
         <div class="cfg-lbl">Colores de los equipos</div>
         <div id="cfg-accents"></div>
         <p class="cfg-hint">Cada color trae su tono para claro y para oscuro, así que
-          siempre se lee bien sobre el fondo. En el estilo Clásico no se usan.</p>
+          siempre se lee bien sobre el fondo. Valen para los dos estilos.</p>
       </div>
 
       <div>
@@ -719,10 +723,16 @@ button{border:0;background:none;cursor:pointer}
   <div class="sep"></div>
   <button data-act="new"><span class="tick"></span><span class="mi">Nueva mano<i>Borra los puntos, no las ganadas</i></span></button>
   <button data-act="mode" id="mi-mode"><span class="tick"></span><span class="mi">Cambiar de modo<i>Dominicano o Cubano</i></span></button>
+  <div class="sep"></div>
+  <button data-go="stats"><span class="tick"></span><span class="mi">Historial<i>Las manos guardadas</i></span></button>
+  <button data-go="config"><span class="tick"></span><span class="mi">Ajustes<i>Puntos, colores, tema</i></span></button>
 </div>
 
 <!-- reacción a pantalla completa (¡Lisa!) -->
 <div class="fxfull" id="fxfull"></div>
+
+<!-- aviso breve, por ahora solo para decir que entró una versión nueva -->
+<div class="toast" id="toast" hidden></div>
 
 <!-- capa oscura compartida -->
 <div class="scrim" id="scrim"></div>
@@ -822,6 +832,7 @@ const REACTIONS = {
   big:  ['¡No ombe!', '¡Ayayai!', '¡Duro con eso!', '¡Uuf!'],
   huge: ['¡Qué palo!', '¡Abusadoraso!', 'Tumba eso ya', '¡Barajen los presos!'],
   capi: ['¡Capicúa!'],
+  fuego: ['¡Anda en fuego!'],   // dos o más pases corridos de una tacada
   dead: ['¡No lo cogen ya!']   // intentaron un atajo estando a 30 o menos de ganar
 };
 const BIG_PTS = 45;    // más de esto en una sola anotación ya es abuso
@@ -865,6 +876,7 @@ const blank = () => ({
   theme:  matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
   style:  'chercha',   // 'chercha' (con vacilada) | 'mono' (Clásico, pelado)
   histView: 'detalle', // cómo se listan las manos: 'detalle' | 'lista' | 'pastillas'
+  lastVer: '',         // última versión vista, para avisar cuando cambia
   accents: [...DEFAULT_ACCENTS],   // color de cada equipo, claves de ACCENTS
   target: 200,         // puntos para ganar la mano; al elegir modo lo pisa MODES[].target
   mode:   null,        // 'dom' | 'cub'
@@ -903,6 +915,15 @@ function save() {
 // se pinta names[i] a pelo: se pasa por aquí. Sirve tanto para S.names como para
 // los nombres congelados de una mano del historial.
 const teamName = (i, names = S.names) => (names && names[i] || '').trim() || DEFAULT_NAMES[i];
+
+let toastTimer = 0;
+function toast(txt, ms = 4500) {
+  const t = $('#toast');
+  t.textContent = txt;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, ms);
+}
 
 const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -955,10 +976,13 @@ function bigReact(text, team) {
   bigTimer = setTimeout(() => { host.innerHTML = ''; }, 2600);
 }
 
-// una sola reacción por anotación, de la más fuerte a la más suave
-function reactTo(team, pts, capi) {
-  if (pts >= HUGE_PTS)     { react(team, pick(REACTIONS.huge)); buzz([14, 45, 14, 45, 14]); }
-  else if (pts > BIG_PTS)  { react(team, pick(REACTIONS.big));  buzz([12, 40, 12]); }
+/* Una sola reacción por anotación. Los pases corridos seguidos van primero
+   aunque no sean lo que más suma: dos ya pasan de BIG_PTS y se comerían el
+   aviso con un genérico, y encadenarlos es más digno de mención que el número. */
+function reactTo(team, pts, capi, pase) {
+  if (pase >= 2)           { react(team, pick(REACTIONS.fuego)); buzz([14, 40, 14, 40, 14]); }
+  else if (pts >= HUGE_PTS){ react(team, pick(REACTIONS.huge));  buzz([14, 45, 14, 45, 14]); }
+  else if (pts > BIG_PTS)  { react(team, pick(REACTIONS.big));   buzz([12, 40, 12]); }
   else if (capi)             react(team, pick(REACTIONS.capi));
 }
 
@@ -967,8 +991,10 @@ function reactTo(team, pts, capi) {
    ============================================================ */
 // Partida en curso = partidas terminadas + 1. Mientras se ve el resultado
 // de una partida ganada seguimos mostrando el número de ESA partida.
-const gameNo = () => S.games[0] + S.games[1] + (S.over >= 0 ? 0 : 1);
-const ordinal = n => ORDINALS[n - 1] || `Partida ${n}`;
+// Math.max(1,…) porque al limpiar el historial se ponen las ganadas a cero, y
+// si en ese momento hay una mano ganada en pantalla la cuenta daría 0.
+const gameNo = () => Math.max(1, S.games[0] + S.games[1] + (S.over >= 0 ? 0 : 1));
+const ordinal = n => ORDINALS[n - 1] || `Mano ${n}`;
 
 function newSession() {
   S.mode = null;
@@ -992,15 +1018,10 @@ function render() {
   const root = document.documentElement;
   root.dataset.theme = S.theme;
   root.dataset.style = S.style;
-  /* Los acentos van en línea sobre :root, y eso le gana a cualquier regla de la
-     hoja — incluida la de "mono", que pone --a y --b del color del texto. Por
-     eso en Clásico hay que QUITARLOS, no sobrescribirlos: si no, el monocromo
-     se quedaría con los colores de equipo puestos. */
+  // el color de cada equipo, en los dos estilos
   [0, 1].forEach(i => {
-    const prop = i === 0 ? '--a' : '--b';
-    if (S.style === 'mono') { root.style.removeProperty(prop); return; }
     const acc = ACCENTS[(S.accents || [])[i]] || ACCENTS[DEFAULT_ACCENTS[i]];
-    root.style.setProperty(prop, acc[S.theme] || acc.light);
+    root.style.setProperty(i === 0 ? '--a' : '--b', acc[S.theme] || acc.light);
   });
   $('meta[name=theme-color]').content = BAR_COLOR[S.theme];
   $$('[data-set-style]').forEach(b => b.setAttribute('aria-checked', b.dataset.setStyle === S.style));
@@ -1020,7 +1041,7 @@ function render() {
   $('#badge-tile').innerHTML = tileSVG(pips, pips);
   // el nombre del modo se va de la vista, pero sigue ahí para lectores de pantalla
   $('#badge').setAttribute('aria-label', `Tranque, modo ${MODES[S.mode].label}`);
-  $('#ord').textContent = ordinal(gameNo());
+  $('#ord').textContent = `${ordinal(gameNo())} mano`;
   // cambiar de modo reparte fichas nuevas: solo tiene sentido antes de anotar
   const puedeModo = !S.rounds.length;
   $('#mi-mode').classList.toggle('off', !puedeModo);
@@ -1052,7 +1073,9 @@ function render() {
   });
 
   // con la mano cerrada y el resultado ya cerrado, dejar volver a él
-  $('#btn-result').hidden = !(S.over >= 0 && winSeen);
+  const hayResultado = S.over >= 0 && winSeen;
+  $('#btn-result').hidden = !hayResultado;
+  $('#foot').hidden = !hayResultado;      // sin nada dentro, el pie sobra
   root.style.setProperty('--wc', S.over === 1 ? 'var(--b)' : 'var(--a)');
 
   const showWin = S.over >= 0 && !winSeen;
@@ -1060,7 +1083,7 @@ function render() {
   if (showWin) {
     const w = S.over;
     $('#win-tile').innerHTML = tileSVG(pips, pips);
-    $('#win-cap').textContent = `${ordinal(gameNo())} partida`;
+    $('#win-cap').textContent = `${ordinal(gameNo())} mano`;
     $('#win-lisa').hidden = !(S.style === 'chercha' && isLisa());
     $('#win-name').textContent = teamName(w);
     $('#win-final').textContent = `${S.scores[0]} — ${S.scores[1]}`;
@@ -1281,7 +1304,7 @@ function addRound(team, pts, pase = 0, capi = false) {
     buzz([18, 60, 18, 60, 40]);
     if (isLisa()) bigReact('¡Lisa!');
   } else {
-    reactTo(team, pts, capi);
+    reactTo(team, pts, capi, pase);
   }
 }
 
@@ -1568,9 +1591,10 @@ async function doAct(act) {
   if (act === 'hist') {
     if (!S.history.length) return;      // no hay nada que borrar
     if (!await ask('Limpiar historial',
-        `Se borran las ${S.history.length} manos guardadas. La partida en curso y los nombres no se tocan.`,
+        `Se borran las ${S.history.length} manos guardadas y la cuenta vuelve a la primera. Los puntos de la mano en curso y los nombres no se tocan.`,
         'Limpiar', true, 'Sí, sé que no se puede deshacer')) return;
     S.history = [];
+    S.games = [0, 0];   // el número de mano sale de aquí, no del historial
     save(); render();
   }
   if (act === 'reset') {
@@ -1801,21 +1825,37 @@ async function hardReset() {
   location.reload();
 }
 
-// Qué versión está sirviendo de verdad el service worker. Si aquí sale
-// "__BUILD__" es que el despliegue no la está estampando y las actualizaciones
-// nunca van a llegar solas, por muy bien que funcione el botón.
-async function showVer() {
-  const el = $('#upd-ver');
-  if (!el) return;
+// Le pregunta al service worker qué versión está sirviendo de verdad.
+// Devuelve null si no contesta, que es lo que hace uno viejo sin GET_VERSION.
+function swVersion() {
   const sw = navigator.serviceWorker && navigator.serviceWorker.controller;
-  if (!sw) { el.textContent = 'Versión: todavía sin instalar'; return; }
-  const v = await new Promise(res => {
+  if (!sw) return Promise.resolve(null);
+  return new Promise(res => {
     const ch = new MessageChannel();
     ch.port1.onmessage = e => res(e.data);
     try { sw.postMessage({ type: 'GET_VERSION' }, [ch.port2]); } catch { res(null); }
-    setTimeout(() => res(null), 1500);   // service worker viejo: no sabe responder
+    setTimeout(() => res(null), 1500);
   });
+}
+
+async function showVer() {
+  const el = $('#upd-ver');
+  if (!el) return;
+  if (!(navigator.serviceWorker && navigator.serviceWorker.controller)) {
+    el.textContent = 'Versión: todavía sin instalar'; return;
+  }
+  const v = await swVersion();
   el.textContent = 'Versión: ' + (v || 'desconocida (service worker viejo)');
+}
+
+/* Avisar de que entró una versión nueva. Se compara con la última que se vio,
+   guardada en el estado: aplicar una actualización recarga la página, así que
+   nada que viva en memoria sobreviviría para contarlo. */
+async function avisarActualizacion() {
+  const v = await swVersion();
+  if (!v) return;
+  if (S.lastVer && S.lastVer !== v) toast(`Actualizado a la versión ${v}`);
+  if (S.lastVer !== v) { S.lastVer = v; save(); }
 }
 
 /* ---- invitación a instalar ----
@@ -1889,6 +1929,11 @@ if ('serviceWorker' in navigator) {
 
 checkIdle();
 render();
+
+// si entró una versión nueva desde la última vez, decirlo
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.ready.then(avisarActualizacion).catch(() => {});
+}
 </script>
 </body>
 </html>
