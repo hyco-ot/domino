@@ -108,11 +108,12 @@ button{border:0;background:none;cursor:pointer}
 .meta-note b{color:var(--txt);font-weight:700}
 
 /* ---------- tablero ---------- */
-/* El modo no se escribe: la ficha ya lo dice (doble 6 dominicano, doble 9 cubano).
-   Queda la ficha y el tope de puntos, que es lo que se consulta de reojo. */
-.badge{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:700;color:var(--dim)}
+/* Cabecera: el nombre de la app con la ficha del modo a su izquierda. El tope de
+   puntos se fue de aquí: ya sale bajo cada equipo ("Faltan X") y en Ajustes. */
+.badge{display:flex;align-items:center;gap:9px}
 .badge svg{height:26px;width:auto}
-.badge .goal{color:var(--txt);font-variant-numeric:tabular-nums}
+.badge .appname{font-size:17px;font-weight:800;letter-spacing:-.02em;color:var(--txt)}
+.badge .appname span{color:var(--ok)}
 /* Solo la barra del tablero va en rejilla: la columna del medio deja la ficha y
    el tope centrados en pantalla, justo encima del ordinal de la partida. Las
    demás pantallas siguen con la barra en fila y su título a la izquierda. */
@@ -187,6 +188,9 @@ button{border:0;background:none;cursor:pointer}
    la ficha de capicúa, al ser más alta, descolocaba la X. */
 .erow{display:flex;align-items:center;justify-content:center;gap:7px;
   padding:3px 0;min-height:30px}
+/* Hora en 24 h a propósito: "11:09 a. m." no cabe en la fila, y dentro de una
+   misma mano nadie duda de si es mañana o noche. */
+.erow .ewhen{font-size:10px;color:var(--dim);font-variant-numeric:tabular-nums;opacity:.75}
 .erow .pts{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--dim)}
 .erow.last .pts{color:var(--tc);font-weight:700;
   padding:2px 8px;border-radius:9px;border:1px dashed var(--line)}
@@ -234,6 +238,17 @@ button{border:0;background:none;cursor:pointer}
 .stepper .val{min-width:88px;text-align:center;font-size:34px;font-weight:800;
   font-variant-numeric:tabular-nums;letter-spacing:-.03em}
 
+/* elegir el color de cada equipo */
+.acc-row{margin-bottom:14px}
+.acc-who{font-size:12.5px;font-weight:600;color:var(--dim);margin-bottom:7px}
+.acc-dots{display:flex;flex-wrap:wrap;gap:9px}
+.acc-dots button{width:34px;height:34px;border-radius:50%;position:relative;
+  border:2px solid transparent;background-clip:padding-box}
+.acc-dots button i{position:absolute;inset:3px;border-radius:50%;background:var(--c)}
+.acc-dots button[aria-checked="true"]{border-color:var(--txt)}
+/* el mismo color en los dos equipos se distinguiría mal */
+.acc-dots button:disabled{opacity:.25}
+
 /* grupos de botones (presets y tema) */
 .seg{display:flex;gap:8px;margin-top:10px}
 .seg button{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
@@ -258,6 +273,17 @@ button{border:0;background:none;cursor:pointer}
 .upd.ok{border-color:var(--ok);color:var(--ok)}
 .upd.busy svg{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* invitación a instalar: solo sale en navegador, nunca en la app ya instalada */
+.install{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  margin-top:10px;padding:12px 14px;border-radius:14px;
+  border:1px solid var(--ok);color:var(--ok);font-size:14px;font-weight:600}
+.install[hidden]{display:none}
+.install:active{background:var(--sunk)}
+.install svg{width:19px;height:19px;flex:0 0 auto;fill:none;stroke:currentColor;
+  stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.install .txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.install .txt i{font-style:normal;font-size:11.5px;font-weight:500;color:var(--dim)}
 
 /* salida de emergencia y línea de versión, discretas bajo el botón de actualizar */
 .linky{display:block;width:100%;text-align:left;padding:9px 2px 3px;
@@ -341,6 +367,11 @@ button{border:0;background:none;cursor:pointer}
 .menu button[aria-checked="true"] .tick{opacity:1}
 .menu button[aria-checked="true"]{font-weight:600}
 .menu .sep{height:1px;background:var(--line);margin:6px 8px}
+/* segunda línea de la opción: dice qué hace, o por qué no se puede ahora */
+.menu .mi{display:flex;flex-direction:column;gap:2px;text-align:left}
+.menu .mi i{font-style:normal;font-size:11.5px;font-weight:500;color:var(--dim);line-height:1.25}
+.menu button.off{opacity:.45}
+.menu button.off .mi i{color:var(--danger)}
 .menu .indent{padding-left:13px}
 
 /* reacción a pantalla completa: se ve el tablero por debajo */
@@ -517,6 +548,10 @@ button{border:0;background:none;cursor:pointer}
       </div>
       <p class="meta-note">Cada modo trae sus puntos. Se cambian en <b>Ajustes</b>.</p>
       <button class="upd"></button>
+      <button class="install" hidden>
+        <svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        <span class="txt">Instálame para mejor experiencia<i></i></span>
+      </button>
     </div>
   </section>
 
@@ -525,7 +560,7 @@ button{border:0;background:none;cursor:pointer}
     <div class="top">
       <div class="badge" id="badge">
         <span class="tile" id="badge-tile"></span>
-        <span class="goal" id="goal">200</span>
+        <span class="appname">Domin<span>ó</span></span>
       </div>
       <button class="icon-btn" id="btn-menu" aria-label="Opciones">
         <svg viewBox="0 0 24 24" stroke="none" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
@@ -600,7 +635,7 @@ button{border:0;background:none;cursor:pointer}
           <button data-step="50" aria-label="Más cincuenta">+</button>
         </div>
         <div class="seg">
-          <button data-target="150">150</button>
+          <button data-target="100">100</button>
           <button data-target="200">200</button>
           <button data-target="300">300</button>
         </div>
@@ -623,11 +658,22 @@ button{border:0;background:none;cursor:pointer}
       </div>
 
       <div>
+        <div class="cfg-lbl">Colores de los equipos</div>
+        <div id="cfg-accents"></div>
+        <p class="cfg-hint">Cada color trae su tono para claro y para oscuro, así que
+          siempre se lee bien sobre el fondo. En el estilo Clásico no se usan.</p>
+      </div>
+
+      <div>
         <div class="cfg-lbl">Actualizaciones</div>
         <button class="upd"></button>
         <p class="cfg-hint">La app se actualiza sola: cuando hay versión nueva entra
           en el primer momento en que no estés anotando. Este botón es por si quieres
           comprobarlo o adelantarlo. Los puntos, los nombres y el historial no se tocan.</p>
+        <button class="install" hidden>
+          <svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          <span class="txt">Instálame para mejor experiencia<i></i></span>
+        </button>
         <button class="linky" id="btn-hard">¿Sigue sin actualizar? Reinstalar</button>
         <p class="cfg-hint" id="upd-ver"></p>
       </div>
@@ -670,8 +716,8 @@ button{border:0;background:none;cursor:pointer}
   <button class="indent" data-set-style="chercha"><span class="tick">✓</span>Chercha</button>
   <button class="indent" data-set-style="mono"><span class="tick">✓</span>Clásico</button>
   <div class="sep"></div>
-  <button data-act="new"><span class="tick"></span>Nueva mano</button>
-  <button data-act="mode"><span class="tick"></span>Modo</button>
+  <button data-act="new"><span class="tick"></span><span class="mi">Nueva mano<i>Borra los puntos, no las ganadas</i></span></button>
+  <button data-act="mode" id="mi-mode"><span class="tick"></span><span class="mi">Cambiar de modo<i>Dominicano o Cubano</i></span></button>
 </div>
 
 <!-- reacción a pantalla completa (¡Lisa!) -->
@@ -748,6 +794,25 @@ const MODES    = { dom:{ label:'Dominicano', pips:6, target:200 },
                    cub:{ label:'Cubano',     pips:9, target:300 } };
 const CHIP_PTS = 30;                   // pase corrido y doble, solo en el estilo "Chercha"
 const DEFAULT_NAMES = ['Nosotros', 'Ellos'];
+
+/* Acentos de cada equipo. Cada uno trae su versión para cada tema, y ahí es
+   donde vive la regla que pediste: sobre fondo oscuro nunca sale un color
+   oscuro, porque la variante oscura del tema siempre es la clara. Así no hace
+   falta prohibir nada al elegir, sencillamente no existe la combinación mala.
+
+   Medidos: todos pasan de 3:1 contra su fondo y de 4.5:1 contra el texto que
+   va encima cuando rellenan un botón. */
+const ACCENTS = {
+  azul:   { name:'Azul',       light:'#26648a', dark:'#63aee2' },
+  terra:  { name:'Terracota',  light:'#a8471e', dark:'#e58a5c' },
+  verde:  { name:'Verde',      light:'#0f7a60', dark:'#3fc9a5' },
+  cian:   { name:'Cian',       light:'#1a6f80', dark:'#5fc7db' },
+  morado: { name:'Morado',     light:'#6b4a9e', dark:'#b394e8' },
+  rosa:   { name:'Rosa',       light:'#a83a63', dark:'#f087ab' },
+  ocre:   { name:'Ocre',       light:'#8a6a1e', dark:'#d9b45c' },
+  rojo:   { name:'Rojo',       light:'#a8302e', dark:'#f0827f' }
+};
+const DEFAULT_ACCENTS = ['azul', 'terra'];
 const ORDINALS = ['Primera','Segunda','Tercera','Cuarta','Quinta',
                   'Sexta','Séptima','Octava','Novena','Décima'];
 
@@ -799,6 +864,7 @@ const blank = () => ({
   theme:  matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
   style:  'chercha',   // 'chercha' (con vacilada) | 'mono' (Clásico, pelado)
   histView: 'detalle', // cómo se listan las manos: 'detalle' | 'lista' | 'pastillas'
+  accents: [...DEFAULT_ACCENTS],   // color de cada equipo, claves de ACCENTS
   target: 200,         // puntos para ganar la mano; al elegir modo lo pisa MODES[].target
   mode:   null,        // 'dom' | 'cub'
   names:  [...DEFAULT_NAMES],
@@ -925,6 +991,16 @@ function render() {
   const root = document.documentElement;
   root.dataset.theme = S.theme;
   root.dataset.style = S.style;
+  /* Los acentos van en línea sobre :root, y eso le gana a cualquier regla de la
+     hoja — incluida la de "mono", que pone --a y --b del color del texto. Por
+     eso en Clásico hay que QUITARLOS, no sobrescribirlos: si no, el monocromo
+     se quedaría con los colores de equipo puestos. */
+  [0, 1].forEach(i => {
+    const prop = i === 0 ? '--a' : '--b';
+    if (S.style === 'mono') { root.style.removeProperty(prop); return; }
+    const acc = ACCENTS[(S.accents || [])[i]] || ACCENTS[DEFAULT_ACCENTS[i]];
+    root.style.setProperty(prop, acc[S.theme] || acc.light);
+  });
   $('meta[name=theme-color]').content = BAR_COLOR[S.theme];
   $$('[data-set-style]').forEach(b => b.setAttribute('aria-checked', b.dataset.setStyle === S.style));
 
@@ -942,9 +1018,13 @@ function render() {
   const pips = MODES[S.mode].pips;
   $('#badge-tile').innerHTML = tileSVG(pips, pips);
   // el nombre del modo se va de la vista, pero sigue ahí para lectores de pantalla
-  $('#badge').setAttribute('aria-label', `${MODES[S.mode].label}, ${S.target} puntos`);
-  $('#goal').textContent = S.target;
+  $('#badge').setAttribute('aria-label', `Dominó, modo ${MODES[S.mode].label}`);
   $('#ord').textContent = ordinal(gameNo());
+  // cambiar de modo reparte fichas nuevas: solo tiene sentido antes de anotar
+  const puedeModo = !S.rounds.length;
+  $('#mi-mode').classList.toggle('off', !puedeModo);
+  $('#mi-mode i').textContent = puedeModo
+    ? 'Dominicano o Cubano' : 'Solo con el marcador en 0—0';
   $('#chips').innerHTML = chipsHTML();
 
   const [s0, s1] = S.scores;
@@ -1028,6 +1108,7 @@ function entriesHTML(team) {
       ? `<button class="pts" data-edit="${e.i}" aria-label="Corregir ${e.p} puntos">${e.p}</button>`
       : `<span class="pts">${e.p}</span>`;
     return `<div class="erow${n === newest ? ' last' : ''}">
+      ${e.ts ? `<span class="ewhen">${soloHora(e.ts)}</span>` : ''}
       ${cifra}
       ${marks.length ? `<span class="marks">${marks.join('')}</span>` : ''}
       ${n === newest ? `<button class="del-x" data-del="${e.i}" aria-label="Quitar ${e.p} puntos"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>` : ''}
@@ -1035,8 +1116,25 @@ function entriesHTML(team) {
   }).reverse().join('');
 }
 
+// Dos filas de puntos de color, una por equipo. Se muestra el tono del tema en
+// curso, y el que ya usa el otro equipo sale apagado para no repetirlo.
+function renderAccents() {
+  const sel = S.accents || DEFAULT_ACCENTS;
+  $('#cfg-accents').innerHTML = [0, 1].map(i => `
+    <div class="acc-row">
+      <div class="acc-who">${teamName(i)}</div>
+      <div class="acc-dots">
+        ${Object.entries(ACCENTS).map(([k, a]) => `
+          <button data-acc="${i}:${k}" aria-label="${a.name}"
+            aria-checked="${sel[i] === k}" ${sel[1 - i] === k ? 'disabled' : ''}
+            ><i style="--c:${a[S.theme] || a.light}"></i></button>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
 function renderConfig() {
   showVer();
+  renderAccents();
   $('#t-val').textContent = S.target;
   $$('[data-target]').forEach(b => b.setAttribute('aria-checked', +b.dataset.target === S.target));
   $$('[data-set-theme]').forEach(b => b.setAttribute('aria-checked', b.dataset.setTheme === S.theme));
@@ -1046,6 +1144,13 @@ function renderConfig() {
 // Se compara por día del calendario, no por 24 horas: una mano de anoche a las
 // 11 sigue siendo "Ayer" aunque hayan pasado menos de 24 horas.
 const dayKey = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+// hora corta para cada anotación de la mano en curso
+const soloHora = ts => {
+  try { return new Date(ts).toLocaleTimeString('es-DO',
+    { hour: '2-digit', minute: '2-digit', hour12: false }); }
+  catch { return ''; }
+};
 
 const fmtWhen = ts => {
   const d = new Date(ts);
@@ -1165,7 +1270,7 @@ function recount() {
 
 function addRound(team, pts, pase = 0, capi = false) {
   if (S.over >= 0 || !(pts > 0)) return;
-  const r = { t: team, p: pts };
+  const r = { t: team, p: pts, ts: Date.now() };
   if (pase) r.pase = pase;      // cuántos pases corridos entraron en estos puntos
   if (capi) r.capi = 1;         // si hubo capicúa (solo puede haber una)
   S.rounds.push(r);
@@ -1393,6 +1498,15 @@ $$('[data-set-theme]').forEach(b => b.addEventListener('click', () => {
   S.theme = b.dataset.setTheme; buzz(8); save(); render();
 }));
 
+// los puntos de color se repintan con la pantalla, así que van por delegación
+$('#cfg-accents').addEventListener('click', e => {
+  const b = e.target.closest('[data-acc]'); if (!b || b.disabled) return;
+  const [i, k] = b.dataset.acc.split(':');
+  S.accents = [...(S.accents || DEFAULT_ACCENTS)];
+  S.accents[+i] = k;
+  buzz(8); save(); render();
+});
+
 $$('[data-mode]').forEach(card => card.addEventListener('click', () => {
   S.mode   = card.dataset.mode;
   S.target = MODES[S.mode].target;   // el modo manda la meta al empezar
@@ -1444,10 +1558,10 @@ async function doAct(act) {
           'Empezar', false, 'Sí, borrar los puntos')) return;
     newGame();
   }
+  // Cambiar de modo cambia las fichas con las que se juega, así que a mitad de
+  // mano no significa nada. Con puntos anotados no se deja: primero Nueva mano.
   if (act === 'mode') {
-    if (S.rounds.length && S.over < 0 &&
-        !await ask('Cambiar de modo', 'La partida en curso se reinicia.',
-          'Cambiar', false, 'Sí, reiniciar la partida')) return;
+    if (S.rounds.length) return;
     newGame(); S.mode = null; save(); render();
   }
   if (act === 'hist') {
@@ -1702,6 +1816,42 @@ async function showVer() {
   });
   el.textContent = 'Versión: ' + (v || 'desconocida (service worker viejo)');
 }
+
+/* ---- invitación a instalar ----
+   Solo tiene sentido en el navegador. Instalada, la app no debe pedir que la
+   instalen. En iOS no existe beforeinstallprompt, así que ahí lo único que se
+   puede hacer es explicar el camino a mano. */
+let installPrompt = null;
+const yaInstalada = () =>
+  matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const esIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+function paintInstall() {
+  const mostrar = !yaInstalada() && (installPrompt || esIOS());
+  $$('.install').forEach(b => {
+    b.hidden = !mostrar;
+    $('.txt i', b).textContent = installPrompt
+      ? 'Abre al instante, sin internet y a pantalla completa'
+      : 'Toca Compartir y luego «Añadir a pantalla de inicio»';
+  });
+}
+
+addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();          // el aviso lo damos nosotros, donde toca
+  installPrompt = e;
+  paintInstall();
+});
+addEventListener('appinstalled', () => { installPrompt = null; paintInstall(); });
+
+$$('.install').forEach(b => b.addEventListener('click', async () => {
+  if (!installPrompt) return;  // iOS: no hay API, el texto ya dice cómo
+  buzz(10);
+  installPrompt.prompt();
+  await installPrompt.userChoice.catch(() => null);
+  installPrompt = null;        // solo se puede usar una vez
+  paintInstall();
+}));
+paintInstall();
 
 $$('.upd').forEach(b => b.addEventListener('click', () => { buzz(8); updTap(); }));
 $('#btn-hard').addEventListener('click', () => { buzz(10); hardReset(); });
