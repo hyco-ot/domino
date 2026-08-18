@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es" data-theme="light" data-style="classic">
+<html lang="es" data-theme="light" data-style="chercha">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
@@ -35,7 +35,8 @@
   --on-solid:#0c100d;
 }
 
-/* ---------- estilo "Simple": todo monocromático ---------- */
+/* ---------- estilo "Clásico" (clave interna: mono): todo monocromático ----------
+   Es el dominó pelado: sin reacciones, sin atajos y sin color de equipo. */
 [data-style="mono"]{
   --a:var(--txt); --b:var(--txt); --ok:var(--txt); --danger:var(--txt);
   --shadow:none;
@@ -114,7 +115,7 @@ button{border:0;background:none;cursor:pointer}
 .team{position:relative;display:flex;flex-direction:column;align-items:center;
   min-width:0;min-height:0;padding:4px 6px 0}
 
-/* ---------- reacciones flotantes (solo estilo "Clásico") ---------- */
+/* ---------- reacciones flotantes (solo estilo "Chercha") ---------- */
 /* Sin overflow:hidden: la frase puede salirse de la columna del equipo.
    Va centrada sobre su equipo y, si es larga, cruza por encima del centro. */
 .fx{position:absolute;inset:0;z-index:5;pointer-events:none;
@@ -223,6 +224,20 @@ button{border:0;background:none;cursor:pointer}
 .seg button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;
   stroke-linecap:round;stroke-linejoin:round}
 
+/* botón de actualizar: el mismo en Ajustes y en la pantalla de elegir modo */
+.upd{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  padding:12px 16px;border-radius:14px;border:1px solid var(--line);
+  font-size:14px;font-weight:600;color:var(--dim)}
+.upd:active{background:var(--sunk)}
+.upd:disabled{opacity:.65}
+.upd svg{width:17px;height:17px;flex:0 0 auto;fill:none;stroke:currentColor;
+  stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+/* hay versión nueva: es lo único de la pantalla que pide que lo toquen */
+.upd.ready{background:var(--ok);border-color:var(--ok);color:var(--on-solid)}
+.upd.ok{border-color:var(--ok);color:var(--ok)}
+.upd.busy svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
 /* historial */
 .stat-card{background:var(--elev);border:1px solid var(--line);border-radius:18px;padding:16px}
 .stat-row{display:flex;align-items:baseline;justify-content:space-between;padding:7px 0}
@@ -242,6 +257,10 @@ button{border:0;background:none;cursor:pointer}
   color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hteam:first-child{text-align:right}
 .hteam.win{color:var(--txt)}
+/* El ganador lleva un ✓ apuntando al marcador. Antes se marcaba solo con el
+   brillo del nombre y no había forma de saber cuál de los dos había ganado. */
+.hline .hteam.win:first-child::after{content:' ✓';color:var(--ok)}
+.hline .hteam.win:last-child::before{content:'✓ ';color:var(--ok)}
 .hpts{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
 .hpts .t0{color:var(--a)} .hpts .t1{color:var(--b)}
 .hpts .d{color:var(--dim);font-weight:600;margin:0 4px}
@@ -293,13 +312,19 @@ button{border:0;background:none;cursor:pointer}
   box-shadow:0 -10px 40px rgba(0,0,0,.28);border-top:1px solid var(--line)}
 .sheet.on{transform:none}
 .handle{width:38px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 12px}
-.sheet-head{display:flex;align-items:baseline;justify-content:space-between;padding:0 4px 12px}
-.sheet-head .who{font-size:12px;text-transform:uppercase;letter-spacing:.12em;
-  font-weight:700;color:var(--pt)}
+/* Flecha que apunta a la columna del equipo al que se anota. Sustituye al nombre:
+   la rejilla de dos mitades la deja centrada sobre esa columna del tablero, así
+   que señala sin que haya que leer nada. Vale para los dos estilos. */
+.aim{display:grid;grid-template-columns:1fr 1fr;padding:0 0 4px}
+.aim svg{width:30px;height:30px;justify-self:center;fill:none;stroke:var(--pt);
+  stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.aim[data-team="0"] svg{grid-column:1}
+.aim[data-team="1"] svg{grid-column:2}
+.sheet-head{display:flex;align-items:baseline;justify-content:flex-end;padding:0 4px 12px}
 .entry{font-size:40px;font-weight:800;font-variant-numeric:tabular-nums;
   letter-spacing:-.03em;color:var(--pt)}
 .entry.zero{opacity:.28}
-/* atajos del estilo "Clásico": pase corrido y capicúa */
+/* atajos del estilo "Chercha": pase corrido y capicúa */
 .chips{display:flex;gap:10px;justify-content:center;align-items:stretch;padding:2px 4px 13px}
 .chips button{flex:1;max-width:162px;display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:5px;padding:11px 10px;border-radius:18px;
@@ -308,6 +333,9 @@ button{border:0;background:none;cursor:pointer}
 .chips button:active{background:var(--sunk);transform:scale(.95)}
 /* capicúa marcada (se conmuta) y pase corrido con cuenta (se acumula) */
 .chips button.on{border-color:var(--pt);box-shadow:inset 0 0 0 1px var(--pt)}
+/* con 30 o menos para ganar los atajos no suman: se ven apagados y tachados */
+.chips button.dead{opacity:.45}
+.chips button.dead .chip-val{text-decoration:line-through}
 .chips button.on .chip-lbl,.chips button.on .chip-val{color:var(--pt)}
 .chip-n{position:absolute;top:7px;right:8px;min-width:20px;height:20px;padding:0 5px;
   border-radius:99px;background:var(--pt);color:var(--on-solid);font-style:normal;
@@ -388,16 +416,17 @@ button{border:0;background:none;cursor:pointer}
           <button class="mode-card" data-mode="dom">
             <span class="tile"></span>
             <span class="mode-name">Dominicano</span>
-            <span class="mode-sub">Doble 6</span>
+            <span class="mode-sub"></span>
           </button>
           <button class="mode-card" data-mode="cub">
             <span class="tile"></span>
             <span class="mode-name">Cubano</span>
-            <span class="mode-sub">Doble 9</span>
+            <span class="mode-sub"></span>
           </button>
         </div>
       </div>
-      <p class="meta-note">Jugando a <b id="meta-target">200</b> puntos</p>
+      <p class="meta-note">Cada modo trae sus puntos. Se cambian en <b>Ajustes</b>.</p>
+      <button class="upd"></button>
     </div>
   </section>
 
@@ -505,6 +534,14 @@ button{border:0;background:none;cursor:pointer}
           </button>
         </div>
       </div>
+
+      <div>
+        <div class="cfg-lbl">Actualizaciones</div>
+        <button class="upd"></button>
+        <p class="cfg-hint">La app se guarda en el teléfono para abrir sin internet.
+          Al actualizar entra la versión nueva y se descarta la guardada. Los puntos,
+          los nombres y el historial no se tocan.</p>
+      </div>
     </div>
   </section>
 
@@ -525,8 +562,8 @@ button{border:0;background:none;cursor:pointer}
 <!-- menú de opciones -->
 <div class="menu" id="menu">
   <div class="lbl">Estilo</div>
-  <button class="indent" data-set-style="classic"><span class="tick">✓</span>Clásico</button>
-  <button class="indent" data-set-style="mono"><span class="tick">✓</span>Simple</button>
+  <button class="indent" data-set-style="chercha"><span class="tick">✓</span>Chercha</button>
+  <button class="indent" data-set-style="mono"><span class="tick">✓</span>Clásico</button>
   <div class="sep"></div>
   <button data-act="new"><span class="tick"></span>Nueva mano</button>
   <button data-act="mode"><span class="tick"></span>Modo</button>
@@ -542,8 +579,10 @@ button{border:0;background:none;cursor:pointer}
 <!-- teclado de puntos -->
 <div class="sheet" id="sheet">
   <div class="handle"></div>
+  <div class="aim" id="pad-aim" role="img">
+    <svg viewBox="0 0 24 24"><path d="M12 20V5M6 11l6-6 6 6"/></svg>
+  </div>
   <div class="sheet-head">
-    <span class="who" id="pad-team">Nosotros</span>
     <span class="entry zero" id="pad-entry">0</span>
   </div>
   <div class="chips" id="chips"></div>
@@ -595,16 +634,21 @@ const TARGET_MIN = 50, TARGET_MAX = 500;
 const HISTORY_MAX = 100;   // manos guardadas; al pasarse se va cayendo la más vieja
 const IDLE_MS  = 1 * 60 * 60 * 1000;   // 1 h sin usar la app -> sesión nueva
 const KEY      = 'domino.v2';
-const MODES    = { dom:{ label:'Dominicano', pips:6 }, cub:{ label:'Cubano', pips:9 } };
-const CHIP_PTS = 30;                   // pase corrido y doble, solo en el estilo "Clásico"
+// cada modo trae su meta de puntos: se aplica al elegirlo, y de ahí en adelante
+// manda lo que diga Ajustes.
+const MODES    = { dom:{ label:'Dominicano', pips:6, target:200 },
+                   cub:{ label:'Cubano',     pips:9, target:300 } };
+const CHIP_PTS = 30;                   // pase corrido y doble, solo en el estilo "Chercha"
+const DEFAULT_NAMES = ['Nosotros', 'Ellos'];
 const ORDINALS = ['Primera','Segunda','Tercera','Cuarta','Quinta',
                   'Sexta','Séptima','Octava','Novena','Décima'];
 
-// Reacciones del estilo "Clásico". Se elige una al azar según lo anotado.
+// Reacciones del estilo "Chercha". Se elige una al azar según lo anotado.
 const REACTIONS = {
   big:  ['¡No ombe!', '¡Ayayai!', '¡Duro con eso!', '¡Uuf!'],
   huge: ['¡Qué palo!', '¡Abusadoraso!', 'Tumba eso ya', '¡Barajen los presos!'],
-  capi: ['¡Capicúa!']
+  capi: ['¡Capicúa!'],
+  dead: ['¡No lo cogen ya!']   // intentaron un atajo estando a 30 o menos de ganar
 };
 const BIG_PTS = 45;    // más de esto en una sola anotación ya es abuso
 const HUGE_PTS = 80;
@@ -645,10 +689,10 @@ function tileSVG(top, bottom) {
    ============================================================ */
 const blank = () => ({
   theme:  matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
-  style:  'classic',   // 'classic' | 'mono'
-  target: 200,         // puntos para ganar la mano
+  style:  'chercha',   // 'chercha' (con vacilada) | 'mono' (Clásico, pelado)
+  target: 200,         // puntos para ganar la mano; al elegir modo lo pisa MODES[].target
   mode:   null,        // 'dom' | 'cub'
-  names:  ['Nosotros', 'Ellos'],
+  names:  [...DEFAULT_NAMES],
   scores: [0, 0],
   games:  [0, 0],      // partidas ganadas por equipo
   rounds: [],          // anotaciones de la mano en curso
@@ -664,7 +708,13 @@ let view = 'game';     // no persiste: 'game' | 'config' | 'stats'
 function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY));
-    return raw && typeof raw === 'object' ? { ...blank(), ...raw } : blank();
+    if (!raw || typeof raw !== 'object') return blank();
+    const s = { ...blank(), ...raw };
+    // El estilo con vacilada se llamaba 'classic' antes de que "Clásico" pasara
+    // a ser el pelado. Sin esto, a quien lo tenía puesto se le caía al monocromo
+    // y encima el menú no marcaba ninguna de las dos opciones.
+    if (s.style === 'classic') s.style = 'chercha';
+    return s;
   } catch { return blank(); }
 }
 function save() {
@@ -672,14 +722,20 @@ function save() {
   try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {}
 }
 
+// Nombre de un equipo, siempre con algo que pintar. Mientras se escribe, el campo
+// puede quedar vacío y así se guarda (y así sobrevive a una recarga), por eso nunca
+// se pinta names[i] a pelo: se pasa por aquí. Sirve tanto para S.names como para
+// los nombres congelados de una mano del historial.
+const teamName = (i, names = S.names) => (names && names[i] || '').trim() || DEFAULT_NAMES[i];
+
 const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
 const pick = a => a[Math.floor(Math.random() * a.length)];
 
 /* ============================================================
-   Reacciones flotantes (solo en el estilo "Clásico")
+   Reacciones flotantes (solo en el estilo "Chercha")
    ============================================================ */
 function react(team, text) {
-  if (S.style !== 'classic') return;
+  if (S.style !== 'chercha') return;
   const fx = $(`.team[data-team="${team}"] .fx`);
   if (!fx) return;
   const el = document.createElement('span');
@@ -692,12 +748,22 @@ function react(team, text) {
 // lisa: cualquiera de los dos gana dejando al otro en cero
 const isLisa = () => S.over >= 0 && S.scores[1 - S.over] === 0;
 
-// reacción a pantalla completa, por encima del tablero pero sin taparlo del todo
-function bigReact(text) {
-  if (S.style !== 'classic') return;
+// Regla de la casa: a 30 o menos de ganar, capicúa y pase corrido dejan de sumar
+// (si no, se ganaría con el atajo). El umbral va atado a CHIP_PTS, que es lo que
+// valen: a 200 se apagan en 170.
+const chipsDead = team => S.scores[team] >= S.target - CHIP_PTS;
+
+// reacción a pantalla completa, por encima del tablero pero sin taparlo del todo.
+// Sale por encima del teclado de puntos, así que sirve para avisar con él abierto.
+// Sin equipo va del color del ganador; con equipo, del color de ese equipo.
+let bigTimer = 0;
+function bigReact(text, team) {
+  if (S.style !== 'chercha') return;
   const host = $('#fxfull');
-  host.innerHTML = `<span class="big-word">${text}</span>`;
-  setTimeout(() => { host.innerHTML = ''; }, 2600);
+  const color = team == null ? 'var(--wc)' : (team === 0 ? 'var(--a)' : 'var(--b)');
+  host.innerHTML = `<span class="big-word" style="--wc:${color}">${text}</span>`;
+  clearTimeout(bigTimer);   // dos avisos seguidos: el viejo no corta al nuevo
+  bigTimer = setTimeout(() => { host.innerHTML = ''; }, 2600);
 }
 
 // una sola reacción por anotación, de la más fuerte a la más suave
@@ -708,7 +774,7 @@ function reactTo(team, pts, capi) {
 }
 
 /* ============================================================
-   Sesión: la cuenta de partidas se reinicia tras 2 h de inactividad
+   Sesión: la cuenta de partidas se reinicia tras 1 h de inactividad
    ============================================================ */
 // Partida en curso = partidas terminadas + 1. Mientras se ve el resultado
 // de una partida ganada seguimos mostrando el número de ESA partida.
@@ -747,7 +813,6 @@ function render() {
   $('#sc-config').classList.toggle('on',  view === 'config');
   $('#sc-stats').classList.toggle('on',   inGame && view === 'stats');
 
-  $('#meta-target').textContent = S.target;
   if (view === 'config') { $('#win').classList.remove('on'); renderConfig(); return; }
   if (view !== 'game')   { $('#win').classList.remove('on'); renderStats(); return; }
   if (!inGame)           { $('#win').classList.remove('on'); return; }
@@ -792,8 +857,8 @@ function render() {
     const w = S.over;
     $('#win-tile').innerHTML = tileSVG(pips, pips);
     $('#win-cap').textContent = `${ordinal(gameNo())} partida`;
-    $('#win-lisa').hidden = !(S.style === 'classic' && isLisa());
-    $('#win-name').textContent = S.names[w] || (w === 0 ? 'Equipo 1' : 'Equipo 2');
+    $('#win-lisa').hidden = !(S.style === 'chercha' && isLisa());
+    $('#win-name').textContent = teamName(w);
     $('#win-final').textContent = `${S.scores[0]} — ${S.scores[1]}`;
   }
 }
@@ -879,9 +944,9 @@ function renderStats() {
     return `<div class="hrow">
       <div class="hmeta"><span>${fmtWhen(r.ts)}</span><span>${modo} · ${r.target}</span></div>
       <div class="hline">
-        <span class="hteam${r.w === 0 ? ' win' : ''}">${r.names[0]}</span>
+        <span class="hteam${r.w === 0 ? ' win' : ''}">${teamName(0, r.names)}</span>
         <span class="hpts"><b class="t0">${r.scores[0]}</b><span class="d">—</span><b class="t1">${r.scores[1]}</b></span>
-        <span class="hteam${r.w === 1 ? ' win' : ''}">${r.names[1]}</span>
+        <span class="hteam${r.w === 1 ? ' win' : ''}">${teamName(1, r.names)}</span>
       </div>
     </div>`;
   }).join('');
@@ -891,8 +956,8 @@ function renderStats() {
       <div class="cfg-lbl">Resumen</div>
       <div class="stat-card">
         ${row('Manos guardadas', h.length)}
-        ${row(S.names[0], wins[0], 't0')}
-        ${row(S.names[1], wins[1], 't1')}
+        ${row(teamName(0), wins[0], 't0')}
+        ${row(teamName(1), wins[1], 't1')}
       </div>
     </div>
     <div>
@@ -924,7 +989,7 @@ function recount() {
       S.games[w]++;
       S.history.push({
         ts: Date.now(), mode: S.mode, target: S.target,
-        names: [S.names[0], S.names[1]], scores: [S.scores[0], S.scores[1]], w
+        names: [teamName(0), teamName(1)], scores: [S.scores[0], S.scores[1]], w
       });
       if (S.history.length > HISTORY_MAX) S.history.shift();
       winSeen = true;
@@ -977,7 +1042,10 @@ const padTotal  = () => (+padDigits() || 0) + (padPase() + (padCapi() ? 1 : 0)) 
 function openPad(team) {
   padTeam = team; padOps = [];
   $('#sheet').style.setProperty('--pt', team === 0 ? 'var(--a)' : 'var(--b)');
-  $('#pad-team').textContent = S.names[team] || (team === 0 ? 'Equipo 1' : 'Equipo 2');
+  // el nombre ya no se pinta: lo dice la flecha, y queda para quien use lector
+  const aim = $('#pad-aim');
+  aim.dataset.team = team;
+  aim.setAttribute('aria-label', `Anotando para ${teamName(team)}`);
   paintPad();
   $('#sheet').classList.add('on');
   $('#scrim').classList.add('on');
@@ -992,9 +1060,10 @@ function paintPad() {
   $('#pad-entry').classList.toggle('zero', n === 0);
   // capicúa: única, el chip solo queda marcado.
   // pase corrido: se acumula, así que lleva la cuenta y su total en el chip.
-  const pn = padPase();
+  const pn = padPase(), dead = chipsDead(padTeam);
   $$('#chips button').forEach(b => {
     const isCapi = b.dataset.chip === 'capi';
+    b.classList.toggle('dead', dead);
     b.classList.toggle('on', isCapi ? padCapi() : pn > 0);
     if (!isCapi) {
       $('.chip-n', b).textContent   = pn || '';
@@ -1017,7 +1086,12 @@ function padKey(k) {
 
 // un atajo, lo pulse el dedo o el teclado
 function chipTap(kind) {
-  if (S.style !== 'classic') return;      // en "Simple" no hay atajos
+  if (S.style !== 'chercha') return;      // en "Clásico" no hay atajos
+  if (chipsDead(padTeam)) {               // ya no les sirven: se avisa y no suma
+    buzz([16, 55, 16]);
+    bigReact(pick(REACTIONS.dead), padTeam);
+    return;
+  }
   buzz(6);
   if (kind === 'capi') {
     const i = padOps.findIndex(o => o.k === 'capi');
@@ -1082,7 +1156,9 @@ $$('[data-set-theme]').forEach(b => b.addEventListener('click', () => {
 }));
 
 $$('[data-mode]').forEach(card => card.addEventListener('click', () => {
-  S.mode = card.dataset.mode;
+  S.mode   = card.dataset.mode;
+  S.target = MODES[S.mode].target;   // el modo manda la meta al empezar
+  recount();
   buzz(12); save(); render();
 }));
 
@@ -1093,7 +1169,7 @@ $$('.team').forEach(el => {
   nameEl.addEventListener('focus', () => nameEl.select());
   nameEl.addEventListener('input', () => { S.names[i] = nameEl.value; save(); });
   nameEl.addEventListener('blur', () => {
-    S.names[i] = nameEl.value.trim() || (i === 0 ? 'Nosotros' : 'Ellos');
+    S.names[i] = nameEl.value.trim() || DEFAULT_NAMES[i];
     save(); render();
   });
   nameEl.addEventListener('keydown', e => { if (e.key === 'Enter') nameEl.blur(); });
@@ -1188,7 +1264,12 @@ document.addEventListener('keydown', e => {
    Ciclo de vida
    ============================================================ */
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') checkIdle();
+  if (document.visibilityState !== 'visible') return;
+  checkIdle();
+  // De paso mira si hay versión nueva, calladito: si la hay, el botón de
+  // Ajustes se pone verde solo. Una PWA instalada casi no navega, así que si
+  // no se pide a mano el navegador puede tardar días en enterarse.
+  if (swReg) swReg.update().catch(() => {});
 });
 setInterval(checkIdle, 60 * 1000);   // también si la app queda abierta pero sin usar
 
@@ -1209,13 +1290,110 @@ setInterval(checkIdle, 60 * 1000);   // también si la app queda abierta pero si
 // Las fichas de las tarjetas de modo son fijas (doble 6 / doble 9): se pintan
 // una sola vez al arrancar. Antes quedaban vacías porque nadie las rellenaba.
 $$('[data-mode]').forEach(card => {
-  const p = MODES[card.dataset.mode].pips;
-  $('.tile', card).innerHTML = tileSVG(p, p);
+  const m = MODES[card.dataset.mode];
+  $('.tile', card).innerHTML = tileSVG(m.pips, m.pips);
+  $('.mode-sub', card).textContent = `Doble ${m.pips} · ${m.target} pts`;
 });
+
+/* ============================================================
+   Actualizaciones
+   ============================================================ */
+/* La app vive guardada en el teléfono, así que una versión nueva en GitHub no
+   entra sola: hay que pedirla. Un mismo botón hace las dos cosas según cómo esté
+   la cosa — busca si no sabe nada, y actualiza si ya hay algo esperando.
+
+   'idle'  nada que hacer, ofrece buscar
+   'busy'  buscando
+   'ready' hay versión nueva esperando; al tocar, entra y recarga
+   'none'  se buscó y no hay nada
+   'off'   sin conexión, o el navegador no trae service worker            */
+let updState = 'idle';   // no persiste: cada arranque empieza sin saber nada
+let swReg = null, applying = false, updTimer = 0;
+
+const UPD_TEXT = {
+  idle:  'Checar actualizaciones',
+  busy:  'Buscando…',
+  ready: 'Actualizar ahora',
+  none:  'Ya estás al día',
+  off:   'Sin conexión'
+};
+const UPD_ICON = {
+  idle:  `<svg viewBox="0 0 24 24">${PASE_PATH}</svg>`,
+  busy:  `<svg viewBox="0 0 24 24">${PASE_PATH}</svg>`,
+  ready: `<svg viewBox="0 0 24 24"><path d="M12 3v13M6 11l6 6 6-6M4 21h16"/></svg>`,
+  none:  `<svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg>`,
+  off:   `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>`
+};
+
+function setUpd(s) {
+  updState = s;
+  paintUpd();
+  clearTimeout(updTimer);
+  // los avisos se van solos; 'ready' se queda hasta que lo toquen
+  if (s === 'none' || s === 'off') updTimer = setTimeout(() => setUpd('idle'), 3500);
+}
+function paintUpd() {
+  const extra = { ready:' ready', busy:' busy', none:' ok' }[updState] || '';
+  $$('.upd').forEach(b => {
+    b.className = 'upd' + extra;
+    b.disabled  = updState === 'busy';
+    b.innerHTML = `${UPD_ICON[updState]}<span>${UPD_TEXT[updState]}</span>`;
+  });
+}
+
+// Un toque: si ya hay versión esperando la aplica, si no, busca.
+async function updTap() {
+  if (updState === 'busy') return;
+
+  if (updState === 'ready') {
+    if (!swReg || !swReg.waiting) return setUpd('idle');   // se esfumó
+    applying = true;                    // habilita la recarga de controllerchange
+    swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    return;
+  }
+
+  if (!swReg) return setUpd('off');
+  setUpd('busy');
+  try { await swReg.update(); } catch { return setUpd('off'); }
+  if (swReg.waiting) return setUpd('ready');
+
+  const inst = swReg.installing;
+  if (!inst) return setUpd('none');
+  // update() vuelve antes de que el SW nuevo termine de instalarse
+  const safety = setTimeout(() => { if (updState === 'busy') setUpd('none'); }, 10000);
+  inst.addEventListener('statechange', () => {
+    if (inst.state === 'installed')     { clearTimeout(safety); setUpd('ready'); }
+    else if (inst.state === 'redundant'){ clearTimeout(safety); setUpd('none'); }
+  });
+}
+
+$$('.upd').forEach(b => b.addEventListener('click', () => { buzz(8); updTap(); }));
+paintUpd();
 
 // instalable y con funcionamiento sin internet
 if ('serviceWorker' in navigator) {
-  addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+  addEventListener('load', async () => {
+    try {
+      // updateViaCache:'none' para que sw.js no se sirva de la caché HTTP
+      const reg = await navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' });
+      swReg = reg;
+      // sin controller es la primera instalación, no una actualización
+      if (reg.waiting && navigator.serviceWorker.controller) setUpd('ready');
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) setUpd('ready');
+        });
+      });
+    } catch {}
+  });
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!applying) return;    // solo recargamos si lo pidió el usuario
+    applying = false;
+    location.reload();
+  });
 }
 
 checkIdle();
