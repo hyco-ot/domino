@@ -264,8 +264,8 @@ button{border:0;background:none;cursor:pointer}
   border:2px solid transparent;background-clip:padding-box}
 .acc-dots button i{position:absolute;inset:3px;border-radius:50%;background:var(--c)}
 .acc-dots button[aria-checked="true"]{border-color:var(--txt)}
-/* el mismo color en los dos equipos se distinguiría mal */
-.acc-dots button:disabled{opacity:.25}
+/* el que tiene el otro equipo: se puede tocar, y entonces se intercambian */
+.acc-dots button.otro{border-color:var(--dim);border-style:dashed}
 
 /* grupos de botones (presets y tema) */
 .seg{display:flex;gap:8px;margin-top:10px}
@@ -1216,8 +1216,9 @@ function renderAccents() {
       <div class="acc-who">${teamName(i)}</div>
       <div class="acc-dots">
         ${Object.entries(ACCENTS).map(([k, a]) => `
-          <button data-acc="${i}:${k}" aria-label="${a.name}"
-            aria-checked="${sel[i] === k}" ${sel[1 - i] === k ? 'disabled' : ''}
+          <button data-acc="${i}:${k}" aria-checked="${sel[i] === k}"
+            class="${sel[1 - i] === k ? 'otro' : ''}"
+            aria-label="${a.name}${sel[1 - i] === k ? ', lo tiene el otro equipo: se intercambian' : ''}"
             ><i style="--c:${a[S.theme] || a.light}"></i></button>`).join('')}
       </div>
     </div>`).join('');
@@ -1609,10 +1610,15 @@ $('#zoom').addEventListener('change', () => { buzz(8); save(); });
 
 // los puntos de color se repintan con la pantalla, así que van por delegación
 $('#cfg-accents').addEventListener('click', e => {
-  const b = e.target.closest('[data-acc]'); if (!b || b.disabled) return;
+  const b = e.target.closest('[data-acc]'); if (!b) return;
   const [i, k] = b.dataset.acc.split(':');
-  S.accents = [...(S.accents || DEFAULT_ACCENTS)];
-  S.accents[+i] = k;
+  const yo = +i, otro = 1 - yo;
+  const acc = [...(S.accents || DEFAULT_ACCENTS)];
+  if (acc[yo] === k) return;                       // ya lo tiene
+  // si el color es del otro equipo, se cambian entre ellos en vez de bloquearlo
+  if (acc[otro] === k) acc[otro] = acc[yo];
+  acc[yo] = k;
+  S.accents = acc;
   buzz(8); save(); render();
 });
 
