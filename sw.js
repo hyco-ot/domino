@@ -1,15 +1,18 @@
 /* Service worker: la app abre al instante y funciona sin internet.
 
-   Cada despliegue trae su VERSION, y ese cambio de bytes es LO ÚNICO que hace
-   que el navegador vea este archivo como nuevo y se baje la versión siguiente.
-   Si sw.js no cambia, el teléfono no se entera nunca de que hay algo nuevo por
-   mucho que cambie index.html. La estampa la GitHub Action al publicar.
+   VERSION sube a mano, +1 por cada cambio suelto (tres cambios de una tacada,
+   +3). Ese cambio de bytes es LO ÚNICO que hace que el navegador vea este
+   archivo como nuevo y se baje la versión siguiente: si sw.js no cambia, el
+   teléfono no se entera nunca por mucho que cambie index.html.
+
+   O sea que SUBIRLA NO ES OPCIONAL. Publicar sin tocarla equivale a no publicar.
+   Sale a la vista en Ajustes, así que se comprueba desde el propio teléfono.
 
    El SW nuevo NO entra solo: se instala y se queda esperando hasta que la app
    le manda SKIP_WAITING, que es lo que dispara el botón "Actualizar". Así nunca
    se mezcla una página vieja ya cargada con archivos de la versión nueva. */
 
-const VERSION = '__BUILD__';          // lo reemplaza el despliegue
+const VERSION = '1.00';               // +1 por cada cambio suelto
 const CACHE   = `domino-${VERSION}`;  // caché propia por versión
 const ASSETS = [
   './',
@@ -33,9 +36,12 @@ self.addEventListener('activate', e => {
   );
 });
 
-// la app lo pide cuando el usuario toca "Actualizar"
 self.addEventListener('message', e => {
-  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
+  if (!e.data) return;
+  // lo pide la app cuando el usuario toca "Actualizar"
+  if (e.data.type === 'SKIP_WAITING') self.skipWaiting();
+  // para poder ver en Ajustes qué versión está sirviendo de verdad
+  if (e.data.type === 'GET_VERSION' && e.ports[0]) e.ports[0].postMessage(VERSION);
 });
 
 /* Caché primero. Como cada versión tiene su propia caché, todo lo que sirve un

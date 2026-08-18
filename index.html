@@ -246,6 +246,12 @@ button{border:0;background:none;cursor:pointer}
 .upd.busy svg{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* salida de emergencia y línea de versión, discretas bajo el botón de actualizar */
+.linky{display:block;width:100%;text-align:left;padding:9px 2px 3px;
+  font-size:12.5px;font-weight:600;color:var(--dim);text-decoration:underline}
+.linky:active{color:var(--txt)}
+#upd-ver{font-variant-numeric:tabular-nums;margin-top:4px;opacity:.75}
+
 /* borrar todo: bordeado en rojo, sin relleno, para que no se toque de pasada */
 .wipe{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
   padding:12px 16px;border-radius:14px;border:1px solid var(--danger);
@@ -573,6 +579,8 @@ button{border:0;background:none;cursor:pointer}
         <p class="cfg-hint">La app se guarda en el teléfono para abrir sin internet.
           Al actualizar entra la versión nueva y se descarta la guardada. Los puntos,
           los nombres y el historial no se tocan.</p>
+        <button class="linky" id="btn-hard">¿Sigue sin actualizar? Reinstalar</button>
+        <p class="cfg-hint" id="upd-ver"></p>
       </div>
 
       <div>
@@ -954,6 +962,7 @@ function entriesHTML(team) {
 }
 
 function renderConfig() {
+  showVer();
   $('#t-val').textContent = S.target;
   $$('[data-target]').forEach(b => b.setAttribute('aria-checked', +b.dataset.target === S.target));
   $$('[data-set-theme]').forEach(b => b.setAttribute('aria-checked', b.dataset.setTheme === S.theme));
@@ -1447,7 +1456,47 @@ async function updTap() {
   });
 }
 
+/* Salida de emergencia. Quita el service worker y TODAS las cachés, y recarga
+   desde la red. No toca localStorage, así que los puntos, los nombres y el
+   historial siguen ahí — al revés que "borrar datos del sitio" del navegador,
+   que se los lleva por delante. Es lo que hay que tocar si un teléfono se quedó
+   clavado en una versión vieja. */
+async function hardReset() {
+  if (!await ask('Reinstalar la app',
+      'Se borra la copia guardada en el teléfono y se baja otra vez, así que hace falta internet ahora mismo. Los puntos, los nombres y el historial no se tocan.',
+      'Reinstalar')) return;
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    if (window.caches) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+  } catch {}
+  location.reload();
+}
+
+// Qué versión está sirviendo de verdad el service worker. Si aquí sale
+// "__BUILD__" es que el despliegue no la está estampando y las actualizaciones
+// nunca van a llegar solas, por muy bien que funcione el botón.
+async function showVer() {
+  const el = $('#upd-ver');
+  if (!el) return;
+  const sw = navigator.serviceWorker && navigator.serviceWorker.controller;
+  if (!sw) { el.textContent = 'Versión: todavía sin instalar'; return; }
+  const v = await new Promise(res => {
+    const ch = new MessageChannel();
+    ch.port1.onmessage = e => res(e.data);
+    try { sw.postMessage({ type: 'GET_VERSION' }, [ch.port2]); } catch { res(null); }
+    setTimeout(() => res(null), 1500);   // service worker viejo: no sabe responder
+  });
+  el.textContent = 'Versión: ' + (v || 'desconocida (service worker viejo)');
+}
+
 $$('.upd').forEach(b => b.addEventListener('click', () => { buzz(8); updTap(); }));
+$('#btn-hard').addEventListener('click', () => { buzz(10); hardReset(); });
 paintUpd();
 
 // instalable y con funcionamiento sin internet
