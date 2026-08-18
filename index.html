@@ -50,7 +50,10 @@
 [data-style="mono"] .bar{height:4px}
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%}
+/* overscroll-behavior también en <html>: con ponerlo solo en body, Chrome de
+   Android seguía sacando el "tirar para recargar" y una anotación a medias se
+   perdía por un gesto de más. */
+html,body{height:100%;overscroll-behavior:none}
 body{
   background:var(--bg); color:var(--txt);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
@@ -173,19 +176,23 @@ button{border:0;background:none;cursor:pointer}
   border-top:1px solid var(--line);padding:7px 0 12px;
   display:flex;flex-direction:column;-webkit-overflow-scrolling:touch}
 .entries::-webkit-scrollbar{display:none}
-.erow{display:grid;grid-template-columns:38px 1fr 26px;align-items:center;padding:2px 0}
-.erow .pts{grid-column:2;text-align:center;font-size:17px;font-weight:600;
-  font-variant-numeric:tabular-nums;color:var(--dim)}
-.erow.last .pts{color:var(--tc);font-weight:700}
-/* logos de los atajos, al lado de la cifra (la cifra queda siempre centrada) */
-.erow .marks{grid-column:1;display:flex;align-items:center;justify-content:flex-end;
-  gap:3px;color:var(--dim)}
+/* Cifra, iconos del atajo y X, los tres pegados y en la misma línea. Antes iba
+   en rejilla de columnas fijas: los iconos quedaban lejos de su propia cifra y
+   la ficha de capicúa, al ser más alta, descolocaba la X. */
+.erow{display:flex;align-items:center;justify-content:center;gap:7px;
+  padding:3px 0;min-height:30px}
+.erow .pts{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--dim)}
+.erow.last .pts{color:var(--tc);font-weight:700;
+  padding:2px 8px;border-radius:9px;border:1px dashed var(--line)}
+.erow.last .pts:active{background:var(--sunk)}
+.erow .marks{display:flex;align-items:center;gap:4px;color:var(--dim)}
 .erow .marks .pg{display:flex;align-items:center;gap:1px}
 .erow .marks .mark{width:14px;height:14px;flex:0 0 auto;
   fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 .erow .marks .xn{font-size:10px;font-weight:700;font-style:normal}
-.erow .marks .tmark svg{display:block;height:17px;width:auto}
-.del-x{grid-column:3;width:26px;height:26px;border-radius:8px;
+/* misma altura que la flecha para que la fila no crezca al poner capicúa */
+.erow .marks .tmark svg{display:block;height:15px;width:auto}
+.del-x{width:24px;height:24px;flex:0 0 auto;border-radius:8px;
   display:grid;place-items:center;color:var(--dim)}
 .del-x:active{background:var(--sunk);color:var(--danger)}
 .del-x svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
@@ -347,12 +354,16 @@ button{border:0;background:none;cursor:pointer}
 }
 
 /* ---------- capas ---------- */
-.scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);
+/* touch-action:none para que arrastrar sobre el teclado o sobre la capa oscura
+   no llegue al documento: ahí es donde nacía el gesto de recargar. Los toques
+   siguen funcionando; lo que se corta es el arrastre. Dentro del teclado no hay
+   nada que se desplace, así que no quita nada. */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);touch-action:none;
   opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
 .scrim.on{opacity:1;pointer-events:auto}
 
 /* teclado de puntos */
-.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--elev);
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--elev);touch-action:none;
   border-radius:26px 26px 0 0;padding:10px 14px calc(16px + env(safe-area-inset-bottom));
   transform:translateY(110%);transition:transform .28s cubic-bezier(.2,.8,.2,1);
   box-shadow:0 -10px 40px rgba(0,0,0,.28);border-top:1px solid var(--line)}
@@ -457,7 +468,15 @@ button{border:0;background:none;cursor:pointer}
 .win .final{font-size:19px;font-weight:600;color:var(--dim);font-variant-numeric:tabular-nums}
 .win .acts{display:flex;flex-direction:column;gap:9px;width:100%;max-width:290px;margin-top:12px}
 .win .acts button{padding:14px;border-radius:16px;font-weight:700;font-size:15px}
-.win .acts .primary{background:var(--wc);color:var(--on-solid)}
+/* Late despacio para que se vea de un vistazo por dónde se sigue. Arranca con
+   retraso, después de que entren la ficha y el nombre, para no competir con
+   ellos. Solo el primario: si laten los dos, no señala ninguno. */
+.win .acts .primary{background:var(--wc);color:var(--on-solid);
+  animation:latir 2s ease-in-out .7s infinite}
+@keyframes latir{
+  0%,100%{transform:scale(1)}
+  50%    {transform:scale(1.045)}
+}
 .win .acts .ghost{border:1px solid var(--line);color:var(--dim);font-weight:600}
 </style>
 </head>
@@ -840,9 +859,12 @@ const isLisa = () => S.over >= 0 && S.scores[1 - S.over] === 0;
    pero no dos (200). Los puntos de la mano entran en la cuenta: con 146 y una
    mano de 15 vamos por 161, así que cabe uno (191) y no dos (221) — porque
    ganar tiene que salir de la mano, no del atajo. Y si la mano ya gana sola,
-   los atajos son de adorno y no estorban. */
-function bonusCap(team, base) {
-  const falta = S.target - (S.scores[team] + base);
+   los atajos son de adorno y no estorban.
+
+   Recibe el marcador ya suelto (no el equipo) porque al corregir una anotación
+   sus puntos siguen sumados en S.scores y falsearían la cuenta. */
+function bonusCap(score, base) {
+  const falta = S.target - (score + base);
   if (falta <= 0) return Infinity;                    // ya ganó con la mano
   return Math.max(0, Math.ceil(falta / CHIP_PTS) - 1);
 }
@@ -994,8 +1016,13 @@ function entriesHTML(team) {
     if (pn === 1)     marks.push(PASE_MARK);
     else if (pn > 1)  marks.push(`<span class="pg">${PASE_MARK}<i class="xn">${pn}</i></span>`);
     if (e.capi)       marks.push(`<span class="tmark">${tileSVG(pips, pips)}</span>`);
+    // solo la última se puede tocar: es la única que lleva X y la única que se
+    // corrige sin tener que deshacer lo de después
+    const cifra = n === newest
+      ? `<button class="pts" data-edit="${e.i}" aria-label="Corregir ${e.p} puntos">${e.p}</button>`
+      : `<span class="pts">${e.p}</span>`;
     return `<div class="erow${n === newest ? ' last' : ''}">
-      <span class="pts">${e.p}</span>
+      ${cifra}
       ${marks.length ? `<span class="marks">${marks.join('')}</span>` : ''}
       ${n === newest ? `<button class="del-x" data-del="${e.i}" aria-label="Quitar ${e.p} puntos"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>` : ''}
     </div>`;
@@ -1146,6 +1173,19 @@ function addRound(team, pts, pase = 0, capi = false) {
   }
 }
 
+/* Corregir una anotación ya hecha. A diferencia de addRound, esta SÍ funciona
+   con la mano ganada: si la que la ganó llevaba un número mal puesto, corregirla
+   es justo lo que hace falta, y recount() reabre la mano solo si toca. */
+function editRound(i, pts, pase = 0, capi = false) {
+  const r = S.rounds[i];
+  if (!r || !(pts > 0)) return;
+  r.p = pts;
+  if (pase) r.pase = pase; else delete r.pase;
+  if (capi) r.capi = 1;   else delete r.capi;
+  recount();
+  save(); render();
+}
+
 // quitar un punto anotado con la X (siempre el último de ese equipo)
 function removeEntry(i) {
   if (!(i >= 0 && i < S.rounds.length)) return;
@@ -1164,7 +1204,8 @@ function newGame() {
    ============================================================ */
 // Cada toque es una operación aparte, así ⌫ deshace lo último sea dígito o atajo.
 // { k:'d', v:'7' } dígito · { k:'pase' } pase corrido · { k:'capi' } capicúa
-let padTeam = 0, padOps = [];
+// padEdit: índice de la anotación que se está corrigiendo, o -1 si es una nueva
+let padTeam = 0, padOps = [], padEdit = -1;
 
 const padDigits = () => padOps.filter(o => o.k === 'd').map(o => o.v).join('');
 const padPase   = () => padOps.filter(o => o.k === 'pase').length;
@@ -1173,13 +1214,16 @@ const padBase   = () => +padDigits() || 0;
 const padBonus  = () => padPase() + (padCapi() ? 1 : 0);
 const padTotal  = () => padBase() + padBonus() * CHIP_PTS;
 // ¿ya no cabe ni uno más? Vale para pintarlos apagados y para frenar el toque.
-const chipsFull = () => padBonus() >= bonusCap(padTeam, padBase());
+// marcador del equipo sin contar la anotación que se corrige: esa se va a sustituir
+const padScore  = () => S.scores[padTeam] -
+  (padEdit >= 0 && S.rounds[padEdit] ? S.rounds[padEdit].p : 0);
+const chipsFull = () => padBonus() >= bonusCap(padScore(), padBase());
 
 /* Subir los puntos de la mano puede dejar sin sitio a atajos ya marcados: con
    100 y un pase corrido caben tres, pero al teclear 80 la mano sola se pone en
    180 y ya no cabe ninguno. Se quitan los últimos marcados, no los primeros. */
 function trimBonus() {
-  const cap = bonusCap(padTeam, padBase());
+  const cap = bonusCap(padScore(), padBase());
   let usados = padBonus();
   if (usados <= cap) return false;
   for (let i = padOps.length - 1; i >= 0 && usados > cap; i--) {
@@ -1188,13 +1232,25 @@ function trimBonus() {
   return true;
 }
 
-function openPad(team) {
-  padTeam = team; padOps = [];
+// edit >= 0 abre el teclado ya relleno con esa anotación, para corregirla
+function openPad(team, edit = -1) {
+  padTeam = team; padOps = []; padEdit = edit;
+  const r = edit >= 0 ? S.rounds[edit] : null;
+  if (r) {
+    // se reconstruyen las pulsaciones: los puntos de la mano son el total
+    // menos lo que aportaron los atajos
+    const base = r.p - ((r.pase || 0) + (r.capi ? 1 : 0)) * CHIP_PTS;
+    if (base > 0) for (const v of String(base)) padOps.push({ k: 'd', v });
+    for (let i = 0; i < (r.pase || 0); i++) padOps.push({ k: 'pase' });
+    if (r.capi) padOps.push({ k: 'capi' });
+  }
   $('#sheet').style.setProperty('--pt', team === 0 ? 'var(--a)' : 'var(--b)');
   // el nombre ya no se pinta: lo dice la flecha, y queda para quien use lector
   const aim = $('#pad-aim');
   aim.dataset.team = team;
-  aim.setAttribute('aria-label', `Anotando para ${teamName(team)}`);
+  aim.setAttribute('aria-label',
+    (edit >= 0 ? 'Corrigiendo la anotación de ' : 'Anotando para ') + teamName(team));
+  $('.go', $('#pad')).textContent = edit >= 0 ? 'Corregir' : 'Anotar';
   paintPad();
   $('#sheet').classList.add('on');
   $('#scrim').classList.add('on');
@@ -1225,9 +1281,12 @@ function padKey(k) {
   if (k === 'del') padOps.pop();
   else if (k === 'ok') {
     trimBonus();                    // por si el último dígito los dejó sin sitio
-    const n = padTotal(), pase = padPase(), capi = padCapi();
+    const n = padTotal(), pase = padPase(), capi = padCapi(), edit = padEdit;
     closePad();
-    if (n > 0) addRound(padTeam, n, pase, capi);
+    if (edit >= 0) {
+      // corregir a 0 es la forma natural de decir "esta anotación no existió"
+      if (n > 0) editRound(edit, n, pase, capi); else removeEntry(edit);
+    } else if (n > 0) addRound(padTeam, n, pase, capi);
     return;
   }
   else if (padDigits().length < 3) {
@@ -1349,8 +1408,11 @@ $$('.team').forEach(el => {
 });
 
 $('#board').addEventListener('click', e => {
-  const x = e.target.closest('[data-del]'); if (!x) return;
-  buzz(10); removeEntry(+x.dataset.del);
+  const x = e.target.closest('[data-del]');
+  if (x) { buzz(10); removeEntry(+x.dataset.del); return; }
+  // tocar la cifra la abre para corregirla, con la mano ganada también
+  const ed = e.target.closest('[data-edit]');
+  if (ed) { const i = +ed.dataset.edit; buzz(10); openPad(S.rounds[i].t, i); }
 });
 
 $('#btn-result').addEventListener('click', () => { buzz(10); winSeen = false; render(); });

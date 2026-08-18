@@ -90,7 +90,7 @@ The `mono` style is not just a palette: it disables functionality. The reactions
 
 ### House rule: a bonus can never be what crosses the finish line
 
-A real domino rule, not a UI decision. A shortcut (capicúa, pase corrido) counts only while, after adding it, you still need more to win. `bonusCap(team, base)` returns how many fit:
+A real domino rule, not a UI decision. A shortcut (capicúa, pase corrido) counts only while, after adding it, you still need more to win. `bonusCap(score, base)` returns how many fit:
 
 ```js
 const falta = S.target - (S.scores[team] + base);
@@ -108,6 +108,16 @@ Two enforcement points, and **both are needed**:
 - `trimBonus()` drops already-marked bonuses when a *digit* makes them illegal. Without it, marking a bonus at 100 (3 fit) and then typing 80 would leave an entry that wins on the bonus. Called on every digit and again on submit.
 
 `paintPad()` marks chips `dead` (dimmed, value struck through) when none fit, so the limit is visible before it's hit.
+
+It takes a **score, not a team index**, because of editing: while correcting an entry, that entry's points are still in `S.scores`, so callers pass `padScore()` — the team's score minus the entry being edited. Passing `S.scores[team]` there would under-count the room left.
+
+### Editing an entry reuses the pad
+
+Tapping the newest entry's number opens `openPad(team, i)`, which rebuilds `padOps` from the stored round (base points = `p` minus what the bonuses contributed, then that many `pase` ops, then `capi`). Submitting routes to `editRound()` instead of `addRound()`; clearing it to zero routes to `removeEntry()`, which is the natural way to say "this never happened".
+
+`editRound()` deliberately **lacks** the `S.over >= 0` guard that `addRound()` has: correcting the entry that ended the hand is exactly when you need it, and `recount()` reopens the hand on its own if the correction drops the team below target.
+
+Only the newest entry per team is editable — the same one that carries the X. Editing an older one would silently invalidate everything scored after it.
 
 ### Score pad: a list of operations
 
