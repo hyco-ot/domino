@@ -21,7 +21,10 @@
   --txt:#1e2b36; --dim:#5f7280;
   --a:#26648a; --b:#a8471e;
   --ok:#14876b; --danger:#b3261e;
-  --ivory:#fbf8f1; --pip:#22323e; --edge:rgba(20,40,55,.22);
+  /* En claro la ficha va oscura con los puntos claros, como una ficha negra de
+     verdad. Antes era hueso sobre un fondo casi blanco y se desdibujaba: la
+     ficha tiene que contrastar con el fondo, no parecerse a él. */
+  --tile:#26333d; --pip:#f4f1e8; --edge:rgba(15,30,42,.30);
   --shadow:0 1px 2px rgba(30,50,65,.06), 0 10px 28px rgba(30,50,65,.09);
   --on-solid:#fff;
 }
@@ -30,7 +33,8 @@
   --txt:#e7eef3; --dim:#849aa8;
   --a:#63aee2; --b:#e58a5c;
   --ok:#3fc9a5; --danger:#f2837b;
-  --ivory:#e7e3d8; --pip:#12140e; --edge:rgba(0,0,0,.45);
+  /* en oscuro se queda hueso: ahí es la clara la que contrasta */
+  --tile:#e7e3d8; --pip:#12140e; --edge:rgba(0,0,0,.45);
   --shadow:0 1px 2px rgba(0,0,0,.4), 0 14px 34px rgba(0,0,0,.5);
   --on-solid:#0c100d;
 }
@@ -41,7 +45,9 @@
   --a:var(--txt); --b:var(--txt); --ok:var(--txt); --danger:var(--txt);
   --shadow:none;
 }
-[data-style="mono"] .t-line{stroke:var(--edge)}
+/* la divisoria va del color de los puntos: --edge es casi invisible sobre la
+   cara oscura del tema claro, y ahí la ficha se quedaba sin línea del medio */
+[data-style="mono"] .t-line{stroke:var(--pip);opacity:.5}
 [data-style="mono"] .add{
   background:transparent; border:1.5px solid var(--txt); color:var(--txt); box-shadow:none;
 }
@@ -78,7 +84,7 @@ button{border:0;background:none;cursor:pointer}
   stroke-linecap:round;stroke-linejoin:round}
 
 /* ---------- fichas de dominó (svg) ---------- */
-.t-face{fill:var(--ivory);stroke:var(--edge);stroke-width:2}
+.t-face{fill:var(--tile);stroke:var(--edge);stroke-width:2}
 /* la divisoria toma el verdeazul del logo, igual que en el icono */
 .t-line{stroke:#20b090;stroke-width:2.5;stroke-linecap:round}
 .t-pip{fill:var(--pip)}
