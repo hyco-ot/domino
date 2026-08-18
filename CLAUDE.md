@@ -12,7 +12,11 @@ A domino scorekeeper (Dominican / Cuban rules) built as an offline PWA. The whol
 
 There is no build, bundler, test suite, or linter **locally** — edit `index.html` and reload. There is no Node or usable Python on the author's machine either, so nothing in this repo can be executed before pushing; local verification means re-reading the diff.
 
-CI is the only place code actually runs. [.github/workflows/deploy.yml](.github/workflows/deploy.yml) blocks the deploy on four checks, each guarding a failure that produces no error message on its own:
+**Publishing is not the workflow's job.** GitHub Pages is configured in branch mode (`main`, `/`), so pushing to `main` publishes on its own. [.github/workflows/deploy.yml](.github/workflows/deploy.yml) — despite the filename — only *checks*; it never deploys. Adding deploy steps there would require flipping the Pages source to "GitHub Actions" and would break a setup that already works.
+
+A red run therefore does **not** stop a bad push from going live. Treat it as a alarm to fix and re-push, not as a gate.
+
+CI is the only place code actually runs. The four checks each guard a failure that produces no error message on its own:
 
 | Check | What it catches |
 |---|---|
