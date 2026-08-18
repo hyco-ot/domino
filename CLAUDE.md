@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A domino scorekeeper (Dominican / Cuban rules) built as an offline PWA. The whole project is 3 source files: `index.html` (HTML + CSS + JS, no dependencies, no build), `sw.js` and `manifest.webmanifest`.
+**Tranque** — a domino scorekeeper (Dominican / Cuban rules) built as an offline PWA. The whole project is 3 source files: `index.html` (HTML + CSS + JS, no dependencies, no build), `sw.js` and `manifest.webmanifest`.
+
+The app was called "Dominó" until v1.18. Two things deliberately kept the old name: the `localStorage` key `domino.v2` (renaming it would wipe everyone's history) and the repo/Pages path `hyco-ot.github.io/domino` (the PWA's scope — renaming the repo would orphan every installed copy). Neither is user-visible.
 
 **The app is in Spanish**: UI strings, state labels, and code comments. New code follows that convention — write comments and user-facing strings in Spanish.
 

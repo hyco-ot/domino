@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#edf1f4">
-<title>Dominó</title>
+<title>Tranque</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
@@ -530,7 +530,8 @@ button{border:0;background:none;cursor:pointer}
       </button>
     </div>
     <div class="mode-wrap">
-      <div class="brand">Domin<span>ó</span></div>
+      <!-- el corte del color cae en la sílaba: tran-que -->
+      <div class="brand">Tran<span>que</span></div>
       <div>
         <p class="kicker">Elige el modo</p>
         <div class="modes">
@@ -560,7 +561,7 @@ button{border:0;background:none;cursor:pointer}
     <div class="top">
       <div class="badge" id="badge">
         <span class="tile" id="badge-tile"></span>
-        <span class="appname">Domin<span>ó</span></span>
+        <span class="appname">Tran<span>que</span></span>
       </div>
       <button class="icon-btn" id="btn-menu" aria-label="Opciones">
         <svg viewBox="0 0 24 24" stroke="none" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
@@ -1018,7 +1019,7 @@ function render() {
   const pips = MODES[S.mode].pips;
   $('#badge-tile').innerHTML = tileSVG(pips, pips);
   // el nombre del modo se va de la vista, pero sigue ahí para lectores de pantalla
-  $('#badge').setAttribute('aria-label', `Dominó, modo ${MODES[S.mode].label}`);
+  $('#badge').setAttribute('aria-label', `Tranque, modo ${MODES[S.mode].label}`);
   $('#ord').textContent = ordinal(gameNo());
   // cambiar de modo reparte fichas nuevas: solo tiene sentido antes de anotar
   const puedeModo = !S.rounds.length;
