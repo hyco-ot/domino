@@ -671,8 +671,8 @@ button{border:0;background:none;cursor:pointer}
       <div>
         <div class="cfg-lbl">Tamaño</div>
         <div class="zoom">
-          <input type="range" id="zoom" min="0.75" max="1.75" step="0.05"
-                 aria-label="Tamaño de la app">
+          <!-- los topes los pone renderConfig desde ZOOM_MIN/ZOOM_MAX -->
+          <input type="range" id="zoom" step="0.05" aria-label="Tamaño de la app">
           <span class="zoom-val" id="zoom-val">1.00×</span>
         </div>
         <p class="cfg-hint">Agranda o achica toda la app a la vez. Útil si el teléfono
@@ -839,7 +839,7 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
    ============================================================ */
 // meta de puntos: ahora vive en el estado (S.target), ajustable desde Ajustes
 const TARGET_MIN = 50, TARGET_MAX = 500;
-const ZOOM_MIN = 0.75, ZOOM_MAX = 1.75;
+const ZOOM_MIN = 0.75, ZOOM_MAX = 1.25;
 const HISTORY_MAX = 100;   // manos guardadas; al pasarse se va cayendo la más vieja
 const IDLE_MS  = 1 * 60 * 60 * 1000;   // 1 h sin usar la app -> sesión nueva
 const KEY      = 'domino.v2';
@@ -1207,7 +1207,10 @@ const clampZoom = z => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, +z || 1));
 function renderConfig() {
   showVer();
   renderAccents();
+  // los topes salen de las constantes: así el control no se despista si cambian
   const z = clampZoom(S.zoom);
+  $('#zoom').min = ZOOM_MIN;
+  $('#zoom').max = ZOOM_MAX;
   $('#zoom').value = z;
   $('#zoom-val').textContent = z.toFixed(2) + '×';
   $('#t-val').textContent = S.target;
