@@ -231,6 +231,20 @@ button{border:0;background:none;cursor:pointer}
 .stat-row .v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
 .stat-row .v.t0{color:var(--a)} .stat-row .v.t1{color:var(--b)}
 .stat-empty{text-align:center;color:var(--dim);font-size:13.5px;line-height:1.5;padding:26px 6px}
+/* una mano guardada */
+.hrow{padding:12px 0}
+.hrow:first-child{padding-top:2px}
+.hrow + .hrow{border-top:1px solid var(--line)}
+.hmeta{display:flex;justify-content:space-between;gap:10px;
+  font-size:11px;color:var(--dim);margin-bottom:6px}
+.hline{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:9px}
+.hteam{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hteam:first-child{text-align:right}
+.hteam.win{color:var(--txt)}
+.hpts{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hpts .t0{color:var(--a)} .hpts .t1{color:var(--b)}
+.hpts .d{color:var(--dim);font-weight:600;margin:0 4px}
 
 /* ---------- menú de opciones ---------- */
 .menu{position:fixed;top:58px;right:12px;z-index:30;background:var(--elev);
@@ -465,14 +479,14 @@ button{border:0;background:none;cursor:pointer}
       <div>
         <div class="cfg-lbl">Puntos para ganar</div>
         <div class="stepper">
-          <button data-step="-5" aria-label="Menos cinco">−</button>
+          <button data-step="-50" aria-label="Menos cincuenta">−</button>
           <span class="val" id="t-val">200</span>
-          <button data-step="5" aria-label="Más cinco">+</button>
+          <button data-step="50" aria-label="Más cincuenta">+</button>
         </div>
         <div class="seg">
-          <button data-target="100">100</button>
           <button data-target="150">150</button>
           <button data-target="200">200</button>
+          <button data-target="300">300</button>
         </div>
         <p class="cfg-hint">Se puede cambiar con la mano empezada. Si alguno ya pasó
           el nuevo tope, la mano se cierra ahí mismo.</p>
@@ -577,7 +591,8 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
    Configuración
    ============================================================ */
 // meta de puntos: ahora vive en el estado (S.target), ajustable desde Ajustes
-const TARGET_MIN = 50, TARGET_MAX = 500, TARGET_STEP = 5;
+const TARGET_MIN = 50, TARGET_MAX = 500;
+const HISTORY_MAX = 100;   // manos guardadas; al pasarse se va cayendo la más vieja
 const IDLE_MS  = 1 * 60 * 60 * 1000;   // 1 h sin usar la app -> sesión nueva
 const KEY      = 'domino.v2';
 const MODES    = { dom:{ label:'Dominicano', pips:6 }, cub:{ label:'Cubano', pips:9 } };
@@ -636,7 +651,8 @@ const blank = () => ({
   names:  ['Nosotros', 'Ellos'],
   scores: [0, 0],
   games:  [0, 0],      // partidas ganadas por equipo
-  rounds: [],          // historial interno, solo para Deshacer
+  rounds: [],          // anotaciones de la mano en curso
+  history: [],         // manos terminadas; sobrevive al reinicio por inactividad
   over:   -1,          // índice del ganador de la partida actual, o -1
   seen:   Date.now()   // última vez que se tocó la app
 });
@@ -832,31 +848,56 @@ function renderConfig() {
   $$('[data-set-theme]').forEach(b => b.setAttribute('aria-checked', b.dataset.setTheme === S.theme));
 }
 
-// De momento solo lo de la sesión actual: no se guardan manos pasadas todavía.
+// Hoy solo la hora, ayer "Ayer", de anteayer para atrás la fecha.
+// Se compara por día del calendario, no por 24 horas: una mano de anoche a las
+// 11 sigue siendo "Ayer" aunque hayan pasado menos de 24 horas.
+const dayKey = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+const fmtWhen = ts => {
+  const d = new Date(ts);
+  try {
+    const hora = d.toLocaleTimeString('es-DO', { hour: 'numeric', minute: '2-digit' });
+    const dias = Math.round((dayKey(new Date()) - dayKey(d)) / 86400000);
+    if (dias <= 0) return hora;                      // hoy (o reloj adelantado)
+    if (dias === 1) return 'Ayer · ' + hora;
+    return d.toLocaleDateString('es-DO', { day: 'numeric', month: 'short' }) + ' · ' + hora;
+  } catch { return d.toLocaleString(); }
+};
+
 function renderStats() {
-  const jugadas = S.games[0] + S.games[1];
-  if (!jugadas && !S.rounds.length) {
-    $('#stats-body').innerHTML = `<p class="stat-empty">Todavía no hay nada que contar.<br>
-      Anota unos puntos y vuelve.</p>`;
+  const h = S.history;
+  if (!h.length) {
+    $('#stats-body').innerHTML = `<p class="stat-empty">Todavía no hay manos guardadas.<br>
+      Solo se guardan las que llegan al tope de puntos.</p>`;
     return;
   }
+  const wins = [h.filter(r => r.w === 0).length, h.filter(r => r.w === 1).length];
   const row = (k, v, cls = '') => `<div class="stat-row"><span class="k">${k}</span><span class="v ${cls}">${v}</span></div>`;
+
+  const lista = h.slice().reverse().map(r => {
+    const modo = MODES[r.mode] ? MODES[r.mode].label : '';
+    return `<div class="hrow">
+      <div class="hmeta"><span>${fmtWhen(r.ts)}</span><span>${modo} · ${r.target}</span></div>
+      <div class="hline">
+        <span class="hteam${r.w === 0 ? ' win' : ''}">${r.names[0]}</span>
+        <span class="hpts"><b class="t0">${r.scores[0]}</b><span class="d">—</span><b class="t1">${r.scores[1]}</b></span>
+        <span class="hteam${r.w === 1 ? ' win' : ''}">${r.names[1]}</span>
+      </div>
+    </div>`;
+  }).join('');
+
   $('#stats-body').innerHTML = `
     <div>
-      <div class="cfg-lbl">Esta sesión</div>
+      <div class="cfg-lbl">Resumen</div>
       <div class="stat-card">
-        ${row('Manos jugadas', jugadas)}
-        ${row(S.names[0], S.games[0], 't0')}
-        ${row(S.names[1], S.games[1], 't1')}
+        ${row('Manos guardadas', h.length)}
+        ${row(S.names[0], wins[0], 't0')}
+        ${row(S.names[1], wins[1], 't1')}
       </div>
     </div>
     <div>
-      <div class="cfg-lbl">Mano en curso · ${ordinal(gameNo())}</div>
-      <div class="stat-card">
-        ${row(S.names[0], S.scores[0], 't0')}
-        ${row(S.names[1], S.scores[1], 't1')}
-        ${row('Anotaciones', S.rounds.length)}
-      </div>
+      <div class="cfg-lbl">Manos · de la más reciente</div>
+      <div class="stat-card">${lista}</div>
     </div>`;
 }
 
@@ -874,10 +915,20 @@ function recount() {
   if (S.scores[0] >= S.target || S.scores[1] >= S.target) w = S.scores[0] >= S.scores[1] ? 0 : 1;
 
   if (w !== prev) {
-    if (prev >= 0) S.games[prev] = Math.max(0, S.games[prev] - 1);
+    // Solo se guarda la mano que de verdad llegó al tope. Las que se abandonan
+    // a medias, o las que quedan en 0-0, no dejan rastro en el historial.
+    if (prev >= 0) { S.games[prev] = Math.max(0, S.games[prev] - 1); S.history.pop(); }
     // al ganar NO saltamos a la pantalla de resultado: se queda el tablero y
     // aparece "Revisar la mano" en el pie por si la quieren ver.
-    if (w   >= 0) { S.games[w]++; winSeen = true; }
+    if (w >= 0) {
+      S.games[w]++;
+      S.history.push({
+        ts: Date.now(), mode: S.mode, target: S.target,
+        names: [S.names[0], S.names[1]], scores: [S.scores[0], S.scores[1]], w
+      });
+      if (S.history.length > HISTORY_MAX) S.history.shift();
+      winSeen = true;
+    }
     S.over = w;
   }
 }
@@ -1078,7 +1129,7 @@ menu.addEventListener('click', async e => {
     newGame(); S.mode = null; save(); render();
   }
   if (act === 'reset') {
-    if (!await ask('Borrar todo', 'Se borran los puntos, las partidas ganadas y los nombres.', 'Borrar', true)) return;
+    if (!await ask('Borrar todo', 'Se borran los puntos, los nombres y todo el historial de manos.', 'Borrar', true)) return;
     const { theme, style } = S;
     S = blank(); S.theme = theme; S.style = style;
     winSeen = false; save(); render();
@@ -1154,6 +1205,13 @@ setInterval(checkIdle, 60 * 1000);   // también si la app queda abierta pero si
     }
   } catch {}
 })();
+
+// Las fichas de las tarjetas de modo son fijas (doble 6 / doble 9): se pintan
+// una sola vez al arrancar. Antes quedaban vacías porque nadie las rellenaba.
+$$('[data-mode]').forEach(card => {
+  const p = MODES[card.dataset.mode].pips;
+  $('.tile', card).innerHTML = tileSVG(p, p);
+});
 
 // instalable y con funcionamiento sin internet
 if ('serviceWorker' in navigator) {

@@ -2,7 +2,7 @@
    Estrategia "stale-while-revalidate": sirve lo guardado y al mismo tiempo
    busca la versión nueva en segundo plano, que entra al abrir la próxima vez. */
 
-const CACHE = 'domino-v1';
+const CACHE = 'domino-v2';
 const ASSETS = [
   './',
   './index.html',
