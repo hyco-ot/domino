@@ -4,8 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#edf1f4">
-<title>Tranque</title>
-<link rel="manifest" href="./manifest.webmanifest">
+<title>Tranque 1.30</title>
 <link rel="icon" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1863,61 +1862,9 @@ function autoApply() {
   if ($('#ask').classList.contains('on'))   return false;  // decidiendo algo
   if (S.over >= 0) return false;   // mano ganada a la vista: al recargar
                                    // reaparecería la pantalla de ganador
-  if (preguntandoUpd) return true;                         // ya se está decidiendo
-  decidirYAplicar();
-  return true;
-}
-
-// Manda entrar a la que está esperando. Es lo que hacía autoApply() entero.
-function aplicaEspera() {
-  if (!swReg || !swReg.waiting) return false;
-  applying = true;                 // habilita la recarga de controllerchange
+  applying = true;
   swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
   return true;
-}
-
-/* Una versión GRANDE —la que cambia el número de delante del punto— se pregunta
-   antes de entrar: cambia cosas que se ven y hay quien prefiere quedarse donde
-   está. Las sueltas siguen entrando solas, que son arreglos y preguntar por cada
-   una no lo aguanta nadie.
-
-   La versión se le pide al worker que ESPERA, no al que manda: es el único que
-   sabe qué trae. Si alguno de los dos no contesta —uno viejo sin GET_VERSION, o
-   la respuesta se pierde— se aplica sin preguntar, que es lo que se venía
-   haciendo: ante la duda, mejor actualizado que parado. */
-const mayorDe = v => parseInt(String(v), 10) || 0;
-
-let preguntandoUpd = false, updPospuesta = '';   // no persisten: se repregunta al abrir
-
-// versión del worker que espera turno, para poder nombrarla en el cartel
-function swVersionEsperando() {
-  const sw = swReg && swReg.waiting;
-  if (!sw) return Promise.resolve(null);
-  return new Promise(res => {
-    const ch = new MessageChannel();
-    ch.port1.onmessage = e => res(e.data);
-    try { sw.postMessage({ type: 'GET_VERSION' }, [ch.port2]); } catch { res(null); }
-    setTimeout(() => res(null), 1500);
-  });
-}
-
-async function decidirYAplicar() {
-  preguntandoUpd = true;
-  try {
-    const [nueva, ahora] = await Promise.all([swVersionEsperando(), swVersion()]);
-    if (!swReg || !swReg.waiting) return;            // se esfumó mientras tanto
-    if (!nueva || !ahora || mayorDe(nueva) === mayorDe(ahora)) return aplicaEspera();
-    if (updPospuesta === nueva) return;              // ya dijo que ahora no
-    const si = await ask(
-      `¿Actualizar a la versión ${nueva}?`,
-      'Es un cambio grande. Los puntos, los nombres y el historial no se tocan, ' +
-      'y la versión de ahora se queda disponible por si la prefieres.',
-      'Actualizar');
-    if (si) aplicaEspera();
-    else    updPospuesta = nueva;                    // se vuelve a ofrecer al abrir
-  } finally {
-    preguntandoUpd = false;
-  }
 }
 
 // Un toque: si ya hay versión esperando la aplica, si no, busca.
@@ -1952,6 +1899,15 @@ async function updTap() {
    que se los lleva por delante. Es lo que hay que tocar si un teléfono se quedó
    clavado en una versión vieja. */
 async function hardReset() {
+  /* COPIA ARCHIVADA: aquí no se reinstala nada. Esta página comparte dominio
+     con la app de verdad, así que desregistrar workers y borrar cachés se
+     llevaría por delante la instalación de la BUENA. Lo de debajo es el
+     hardReset original y queda inalcanzable a propósito. */
+  return ask('Esta es la copia de la 1.30',
+    'Es una copia guardada de la versión anterior: no se actualiza ni se ' +
+    'reinstala. La app que se mantiene al día está en la dirección de siempre.',
+    'Entendido');
+
   if (!await ask('Reinstalar la app',
       'Se borra la copia guardada en el teléfono y se baja otra vez, así que hace falta internet ahora mismo. Los puntos, los nombres y el historial no se tocan.',
       'Reinstalar')) return;
@@ -1984,6 +1940,9 @@ function swVersion() {
 async function showVer() {
   const el = $('#upd-ver');
   if (!el) return;
+  // copia archivada: la versión es fija, no hay worker a quien preguntarle
+  el.textContent = 'Versión 1.30 · copia guardada de la versión anterior';
+  return;
   if (!(navigator.serviceWorker && navigator.serviceWorker.controller)) {
     el.textContent = 'Versión: todavía sin instalar'; return;
   }
@@ -2041,8 +2000,9 @@ $$('.upd').forEach(b => b.addEventListener('click', () => { buzz(8); updTap(); }
 $('#btn-hard').addEventListener('click', () => { buzz(10); hardReset(); });
 paintUpd();
 
-// instalable y con funcionamiento sin internet
-if ('serviceWorker' in navigator) {
+// COPIA ARCHIVADA: aquí no se registra service worker a propósito. Esta página
+// se queda en la 1.30 para siempre; la app que se actualiza es la de /domino/.
+if (false) {
   addEventListener('load', async () => {
     try {
       // updateViaCache:'none' para que sw.js no se sirva de la caché HTTP
@@ -2073,10 +2033,8 @@ if ('serviceWorker' in navigator) {
 checkIdle();
 render();
 
-// si entró una versión nueva desde la última vez, decirlo
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.ready.then(avisarActualizacion).catch(() => {});
-}
+// COPIA ARCHIVADA: nada de avisos de versión. Quien controla esta página es el
+// worker de la app de /domino/, así que anunciaría la versión de la OTRA.
 </script>
 </body>
 </html>
