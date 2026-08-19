@@ -90,28 +90,27 @@ The `mono` style is not just a palette: it disables functionality. The reactions
 
 `tileSVG(top, bottom)` builds a tile from `LAYOUT`, a 3×3 grid of pip positions per number (0–9). It's used in the mode cards, the badge, the capicúa chip, the entry log, and the winner screen. The pip count comes from `MODES[S.mode].pips`.
 
-### House rule: a bonus can never be what crosses the finish line
+### House rule: the pase corrido can't be what wins the hand — and the capicúa always fits
 
-A real domino rule, not a UI decision. A shortcut (capicúa, pase corrido) counts only while, after adding it, you still need more to win. `bonusCap(score, base)` returns how many fit:
+A real domino rule, not a UI decision, and it applies to **the pase corrido only**. `bonusCap(score)` returns how many fit:
 
 ```js
-const falta = S.target - (S.scores[team] + base);
-if (falta <= 0) return Infinity;              // the hand already won on its own
+const falta = S.target - score;
+if (falta <= 0) return 0;                     // already at the target
 return Math.max(0, Math.ceil(falta / CHIP_PTS) - 1);
 ```
 
-**The hand's own points are part of the calculation** — that's the subtle half. At 146 with 15 scored this hand you're effectively at 161, so one bonus fits (191) but not two (221): the win has to come out of the hand, not the bonus. Once the hand wins by itself, bonuses are decoration and are allowed freely.
+At a 200 target: 6 from zero, 3 at 100, 2 at 138, 1 at 140, none at 170.
 
-At a 200 target this yields: 6 bonuses from zero, 3 at 100, 1 at 140, none at 170.
+**The measure is the score the team had before this hand — the tile points typed on the pad are deliberately NOT part of it.** They are separate and land at the end. An earlier version folded them in, and the result was baffling in the hand: at 138 you'd mark two pases (both legal), start typing the 35 your tiles came to, and watch the pases disappear one per digit without having touched them. The cap is decided when a shortcut is marked; typing never moves it.
 
-Two enforcement points, and **both are needed**:
+**The capicúa has no cap at all.** It always fits, at any score, and its chip never dims. It doesn't go through `bonusCap`.
 
-- `chipTap()` refuses a tap when `chipsFull()` — the single funnel for on-screen chips and the `p`/`c` keys. Un-ticking a capicúa is always allowed; removing can't break the rule.
-- `trimBonus()` drops already-marked bonuses when a *digit* makes them illegal. Without it, marking a bonus at 100 (3 fit) and then typing 80 would leave an entry that wins on the bonus. Called on every digit and again on submit.
+Enforcement is now a single point: `chipTap()` refuses a `pase` tap when `paseLleno()` — the one funnel for both the on-screen chips and the `p`/`c` keys. There is no `trimBonus()` any more, and reintroducing one would bring the disappearing-pases bug straight back.
 
-`paintPad()` marks chips `dead` (dimmed, value struck through) when none fit, so the limit is visible before it's hit.
+`paintPad()` marks only the pase chip `dead` (dimmed, value struck through) when none fit, so the limit is visible before it's hit.
 
-It takes a **score, not a team index**, because of editing: while correcting an entry, that entry's points are still in `S.scores`, so callers pass `padScore()` — the team's score minus the entry being edited. Passing `S.scores[team]` there would under-count the room left.
+`bonusCap` takes a **score, not a team index**, because of editing: while correcting an entry, that entry's points are still in `S.scores`, so callers pass `padScore()` — the team's score minus the entry being edited. Passing `S.scores[team]` there would under-count the room left.
 
 ### Editing an entry reuses the pad
 
