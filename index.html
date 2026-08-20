@@ -88,6 +88,9 @@ button{border:0;background:none;cursor:pointer}
 .icon-btn{width:42px;height:42px;border-radius:13px;color:var(--dim);
   display:grid;place-items:center;font-size:19px;line-height:1}
 .icon-btn:active{background:var(--sunk)}
+/* display propio, así que sin esto la propiedad hidden no haría nada */
+.icon-btn[hidden]{display:none}
+.icon-btn.off{opacity:.4}
 .icon-btn svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;
   stroke-linecap:round;stroke-linejoin:round}
 
@@ -765,15 +768,15 @@ button{border:0;background:none;cursor:pointer}
         <div id="grupo-chips"></div>
         <p class="kicker">¿Cómo van a jugar?</p>
         <div class="modes">
-          <button class="mode-card" data-tipo="informal">
-            <span class="tipo-ico"><svg viewBox="0 0 24 24"><path d="M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12z"/></svg></span>
-            <span class="mode-name">Informal</span>
-            <span class="mode-sub">Sin preguntar quién</span>
-          </button>
           <button class="mode-card" data-tipo="formal">
             <span class="tipo-ico"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3.4"/><path d="M2.5 20v-1.6A4 4 0 0 1 6.5 14.4h5A4 4 0 0 1 15.5 18.4V20"/><circle cx="18" cy="7.5" r="2.6"/><path d="M17 14.5h1.6a3 3 0 0 1 3 3V20"/></svg></span>
             <span class="mode-name">Formal</span>
             <span class="mode-sub">Con jugadores</span>
+          </button>
+          <button class="mode-card" data-tipo="informal">
+            <span class="tipo-ico"><svg viewBox="0 0 24 24"><path d="M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12z"/></svg></span>
+            <span class="mode-name">Informal</span>
+            <span class="mode-sub">Sin preguntar quién</span>
           </button>
         </div>
       </div>
@@ -899,7 +902,7 @@ button{border:0;background:none;cursor:pointer}
         <span class="tile" id="badge-tile"></span>
         <span class="appname">Tran<span>que</span></span>
       </div>
-      <button class="icon-btn" id="btn-jug" data-go="jugadores" aria-label="Jugadores" hidden>
+      <button class="icon-btn" id="btn-jug" aria-label="Jugadores">
         <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.4 20a5.6 5.6 0 0 1 11.2 0"/><circle cx="17.2" cy="9.2" r="2.5"/><path d="M16.4 14.8A4.9 4.9 0 0 1 20.6 20"/></svg>
       </button>
       <button class="icon-btn" id="btn-menu" aria-label="Opciones">
@@ -1723,8 +1726,10 @@ function render() {
   $('#mi-mode').classList.toggle('off', !puedeModo);
   $('#mi-mode i').textContent = puedeModo ? '' : 'Solo con el marcador en 0—0';
   $('#chips').innerHTML = chipsHTML();
-  // cambiar de jugadores solo tiene sentido si hay jugadores que cambiar
-  $('#btn-jug').hidden = !(S.tipo === 'formal' && S.mesa);
+  /* El botón se queda a la vista siempre, apagado cuando no se puede usar: al
+     tocarlo dice por qué. Escondido no se entendía nada — y encima no llegaba a
+     esconderse, porque .icon-btn trae su propio display y le gana a [hidden]. */
+  $('#btn-jug').classList.toggle('off', !(S.tipo === 'formal' && S.mesa));
 
   const [s0, s1] = S.scores;
   const leader = s0 === s1 ? -1 : (s0 > s1 ? 0 : 1);
@@ -2824,6 +2829,16 @@ $('#jug-nombre').addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); $('#jug-add').click(); }
 });
 $('#jug-ok').addEventListener('click', guardarJug);
+
+/* Los jugadores solo existen en Formal, y Formal necesita un nombre. Cada
+   "no se puede" dice lo que falta para poder. */
+$('#btn-jug').addEventListener('click', () => {
+  buzz(8);
+  if (!puedeFormal()) return toast('Pon tu nombre en Ajustes y podrás jugar en Formal');
+  if (S.tipo !== 'formal' || !S.mesa)
+    return toast('Esta mano es informal. Empieza una en Formal para ver los jugadores');
+  view = 'jugadores'; render();
+});
 
 // nombres de equipo desde Ajustes: en vivo sin render(), se guarda al soltar
 $('#cfg-nombres').addEventListener('input', e => {
