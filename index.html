@@ -194,18 +194,54 @@ button{border:0;background:none;cursor:pointer}
 .silla.yo .tu{font-size:10px;font-weight:700;letter-spacing:.1em;
   text-transform:uppercase;color:var(--as)}
 
-.mesa-acts{display:flex;justify-content:center;margin-top:6px}
 #mesa-gchips{display:flex;flex-direction:column;gap:8px;margin-bottom:6px}
 .eqrow input{flex:1;min-width:0;background:transparent;border:0;
   border-bottom:1px dashed var(--line);font-size:15px;padding:5px 0;
   color:var(--txt);outline:none}
 .eqrow input:focus{border-bottom-color:var(--as,var(--ok))}
 /* jugadores ya conocidos, para elegir en vez de teclear */
-.jchips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:16px 0 0}
+.jchips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:16px 0 0}
 .jchips:empty{display:none}
-.jchips button{padding:5px 11px;border-radius:99px;border:1px solid var(--line);
-  font-size:12.5px;font-weight:600;color:var(--dim)}
+.jchips button{padding:9px 14px;border-radius:99px;border:1px solid var(--line);
+  font-size:14px;font-weight:600;color:var(--dim)}
 .jchips button:active{background:var(--sunk)}
+.jchips[hidden]{display:none}
+
+/* ---------- pantalla de jugadores de la mesa ---------- */
+/* El botón de guardar solo existe cuando hay algo que guardar, y va pegado
+   arriba: la lista de conocidos puede ser larga y al bajar por ella el botón se
+   quedaba fuera de pantalla. .sheetish es quien hace scroll, así que el sticky
+   se agarra a ella. */
+.jug-guardar{position:sticky;top:0;z-index:5;display:flex;justify-content:center;
+  padding:6px 0 10px;background:var(--bg)}
+.jug-guardar[hidden]{display:none}
+.jug-guardar button{max-width:270px}
+.jug-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.jug-col{display:flex;flex-direction:column;gap:8px;min-width:0}
+.jug-col .cab{display:flex;align-items:center;gap:7px;min-width:0;
+  font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--dim)}
+.jug-col .cab i{width:9px;height:9px;flex:0 0 auto;border-radius:99px;background:var(--as)}
+.jug-col .cab span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Cada jugador puesto es una pastilla del color de su equipo. Tocarla lo quita:
+   con la mesa llena es la única manera de hacer sitio. */
+.jug-p{display:flex;align-items:center;justify-content:space-between;gap:6px;
+  min-width:0;padding:13px 15px;border-radius:99px;
+  border:1px solid var(--as);color:var(--as);font-size:15.5px;font-weight:700}
+.jug-p span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jug-p svg{width:13px;height:13px;flex:0 0 auto;opacity:.65;
+  fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
+.jug-p:active{background:var(--sunk)}
+/* silla libre; la marcada es la que recibe al siguiente que se toque abajo */
+.jug-libre{padding:13px 15px;border-radius:99px;border:1px dashed var(--line);
+  color:var(--dim);font-size:14px;font-weight:600}
+.jug-libre.arm{border-style:solid;border-color:var(--ok);color:var(--ok)}
+.jug-libre:active{background:var(--sunk)}
+.jug-nuevo{display:flex;align-items:center;gap:8px}
+.jug-nuevo[hidden]{display:none}
+.jug-nuevo input{flex:1;min-width:0;padding:12px 14px;border-radius:14px;
+  border:1px solid var(--line);background:var(--elev);color:var(--txt);font-size:15px}
+.jug-nuevo .linky{width:auto;flex:0 0 auto;margin:0}
 .eqrow{display:flex;align-items:center;gap:10px;padding:6px 0}
 .eqrow > i{width:11px;height:11px;flex:0 0 auto;border-radius:50%;background:var(--as)}
 
@@ -445,7 +481,9 @@ button{border:0;background:none;cursor:pointer}
 .stat-empty{text-align:center;color:var(--dim);font-size:13.5px;line-height:1.5;padding:26px 6px}
 /* la ficha del modo: sustituye a escribir "Dominicano" o "Cubano" */
 .hficha svg{height:17px;width:auto;display:block}
-.hmode{display:flex;align-items:center;gap:6px}
+/* El tope arriba y la ficha debajo: el número es el dato y la ficha dice con
+   qué se jugó, así que va de apoyo y no compitiendo por la misma línea. */
+.hmode{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
 
 /* vista "lista": una mano por línea, apretada */
 .hrow.lista{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;
@@ -487,6 +525,12 @@ button{border:0;background:none;cursor:pointer}
 /* El ganador va de su color y el otro en gris. El ✓ se queda: el color solo no
    basta cuando los dos equipos tienen tonos parecidos. */
 .hteams .hteam.win::after{content:' ✓';color:var(--ok)}
+/* Debajo del nombre de equipo, quiénes lo jugaron. Va en columna para que la
+   pareja no le robe ancho al nombre. */
+.hcol{display:flex;flex-direction:column;align-items:center;min-width:0;gap:1px}
+.hjug{font-style:normal;font-size:10px;font-weight:600;letter-spacing:.01em;
+  text-transform:none;color:var(--dim);opacity:.85;max-width:100%;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hteams .hvs{color:var(--line);font-weight:600;flex:0 0 auto}
 .hpts{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
 .hpts .t0{color:var(--a)} .hpts .t1{color:var(--b)}
@@ -515,6 +559,7 @@ button{border:0;background:none;cursor:pointer}
 /* segunda línea de la opción: dice qué hace, o por qué no se puede ahora */
 .menu .mi{display:flex;flex-direction:column;gap:2px;text-align:left}
 .menu .mi i{font-style:normal;font-size:11.5px;font-weight:500;color:var(--dim);line-height:1.25}
+.menu .mi i:empty{display:none}
 /* icono entre el ✓ y el texto; en gris para que mande la palabra */
 .menu button svg{width:18px;height:18px;flex:0 0 auto;color:var(--dim);
   fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -796,8 +841,10 @@ button{border:0;background:none;cursor:pointer}
         </div>
         <p class="mesa-cap" id="mesa-cap"></p>
         <div class="jchips" id="mesa-conocidos"></div>
-        <div class="mesa-acts">
-          <button class="linky" id="mesa-rotar">↻ Rotar a los demás</button>
+        <div class="jug-nuevo" id="mesa-alta" style="margin-top:14px">
+          <input id="mesa-alta-nombre" maxlength="18" spellcheck="false" autocomplete="off"
+                 placeholder="Alguien nuevo">
+          <button class="linky" id="mesa-alta-ok">Sentar</button>
         </div>
 
         <div style="margin-top:22px">
@@ -818,6 +865,33 @@ button{border:0;background:none;cursor:pointer}
     </div>
   </section>
 
+  <!-- ============ jugadores de la mesa (solo en Formal) ============ -->
+  <section class="screen" id="sc-jug">
+    <div class="top">
+      <button class="icon-btn" data-go="game" aria-label="Volver">
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="scr-title">Jugadores</div>
+      <div class="grow"></div>
+    </div>
+    <div class="sheetish">
+      <div class="jug-guardar" id="jug-guardar" hidden>
+        <button class="reg-ok" id="jug-ok">Guardar</button>
+      </div>
+      <div class="jug-cols" id="jug-cols"></div>
+      <p class="cfg-hint" id="jug-hint"></p>
+      <div>
+        <div class="cfg-lbl" id="jug-lbl">Sentar a alguien</div>
+        <div class="jchips" id="jug-conocidos"></div>
+        <div class="jug-nuevo" id="jug-nuevo">
+          <input id="jug-nombre" maxlength="18" spellcheck="false" autocomplete="off"
+                 placeholder="Alguien nuevo">
+          <button class="linky" id="jug-add">Sentar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ pantalla 2: tablero ============ -->
   <section class="screen" id="sc-game">
     <div class="top">
@@ -825,6 +899,9 @@ button{border:0;background:none;cursor:pointer}
         <span class="tile" id="badge-tile"></span>
         <span class="appname">Tran<span>que</span></span>
       </div>
+      <button class="icon-btn" id="btn-jug" data-go="jugadores" aria-label="Jugadores" hidden>
+        <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.4 20a5.6 5.6 0 0 1 11.2 0"/><circle cx="17.2" cy="9.2" r="2.5"/><path d="M16.4 14.8A4.9 4.9 0 0 1 20.6 20"/></svg>
+      </button>
       <button class="icon-btn" id="btn-menu" aria-label="Opciones">
         <svg viewBox="0 0 24 24" stroke="none" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
       </button>
@@ -1060,10 +1137,10 @@ button{border:0;background:none;cursor:pointer}
   <div class="sep"></div>
   <button data-act="new">
     <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-    <span class="mi">Nueva mano<i>Borra los puntos, no las ganadas</i></span></button>
+    <span class="mi">Reiniciar mano<i>Borra los puntos, no las ganadas</i></span></button>
   <button data-act="mode" id="mi-mode">
     <svg viewBox="0 0 24 24"><path d="M7 4v13M4 14l3 3 3-3M17 20V7M14 10l3-3 3 3"/></svg>
-    <span class="mi">Cambiar de modo<i>Dominicano o Cubano</i></span></button>
+    <span class="mi">Volver al inicio<i></i></span></button>
   <div class="sep"></div>
   <button data-go="stats">
     <svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V4M16 20v-6M21 20H3"/></svg>
@@ -1320,6 +1397,11 @@ const idsEquipo = (t, ids) => [(ids || [])[t], (ids || [])[t + 2]].filter(Boolea
 const jugadorDe   = id => S.jugadores.find(j => j.id === id) || null;
 const nombreDeId  = id => { const j = jugadorDe(id); return j ? j.nombre : ''; };
 const jugadoresVivos = () => S.jugadores.filter(j => !j.borrado);
+
+/* Por orden alfabético, sin distinguir mayúsculas ni acentos: buscar un nombre
+   conocido con el dedo se hace mirando, y "el último que jugó" no ayuda a
+   mirar. Antes iban por visto, que además cambiaba de orden solo. */
+const porNombre = (a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' });
 
 /* Quien anota, como jugador del catálogo. Es solo lectura a propósito:
    altaJugador() lo daría de alta si no estuviera, y pintar una pantalla no
@@ -1602,7 +1684,7 @@ function render() {
   const registrado = S.anotador !== null;
   $('#sc-bienvenida').classList.toggle('on', !registrado);
   if (!registrado) {
-    ['#sc-mode','#sc-game','#sc-config','#sc-stats','#sc-mesa']
+    ['#sc-mode','#sc-game','#sc-config','#sc-stats','#sc-mesa','#sc-jug']
       .forEach(s => $(s).classList.remove('on'));
     $('#win').classList.remove('on');
     return;
@@ -1611,16 +1693,22 @@ function render() {
   const inGame = !!S.mode;
   if (!inGame && view === 'stats') view = 'game';     // sin partida no hay historial
   if (inGame && view === 'mesa')   view = 'game';     // no se rearma a media partida
+  // los jugadores de la mesa solo existen en Formal, y solo con partida abierta
+  if (view === 'jugadores' && !(inGame && S.tipo === 'formal' && S.mesa)) view = 'game';
+  // salir de la pantalla tira el borrador: lo que no se guardó no cuenta
+  if (view !== 'jugadores') { jugBorrador = null; jugSilla = -1; }
   $('#sc-mode').classList.toggle('on',   !inGame && view === 'game');
   $('#sc-mesa').classList.toggle('on',   !inGame && view === 'mesa');
   $('#sc-game').classList.toggle('on',    inGame && view === 'game');
   $('#sc-config').classList.toggle('on',  view === 'config');
   $('#sc-stats').classList.toggle('on',   inGame && view === 'stats');
+  $('#sc-jug').classList.toggle('on',     inGame && view === 'jugadores');
 
   // salir de Ajustes vuelve a plegar la zona de peligro y suelta lo marcado
   if (view !== 'config' && borrarAbierto) { borrarAbierto = false; borrarSel.clear(); }
 
   if (view === 'mesa')   { $('#win').classList.remove('on'); renderMesa(); return; }
+  if (view === 'jugadores') { $('#win').classList.remove('on'); renderJug(); return; }
   if (view === 'config') { $('#win').classList.remove('on'); renderConfig(); return; }
   if (view !== 'game')   { $('#win').classList.remove('on'); renderStats(); return; }
   if (!inGame)           { $('#win').classList.remove('on'); renderLanzador(); return; }
@@ -1633,9 +1721,10 @@ function render() {
   // cambiar de modo reparte fichas nuevas: solo tiene sentido antes de anotar
   const puedeModo = !S.rounds.length;
   $('#mi-mode').classList.toggle('off', !puedeModo);
-  $('#mi-mode i').textContent = puedeModo
-    ? 'Dominicano o Cubano' : 'Solo con el marcador en 0—0';
+  $('#mi-mode i').textContent = puedeModo ? '' : 'Solo con el marcador en 0—0';
   $('#chips').innerHTML = chipsHTML();
+  // cambiar de jugadores solo tiene sentido si hay jugadores que cambiar
+  $('#btn-jug').hidden = !(S.tipo === 'formal' && S.mesa);
 
   const [s0, s1] = S.scores;
   const leader = s0 === s1 ? -1 : (s0 > s1 ? 0 : 1);
@@ -1856,11 +1945,12 @@ function refrescarMesa() {
 
   $('#mesa-conocidos').innerHTML = jugadoresVivos()
     .filter(j => !puestos.includes(j.id))
-    .sort((a, b) => (b.visto || 0) - (a.visto || 0)).slice(0, 10)
+    .sort(porNombre)
     .map(j => `<button data-poner="${j.id}">${escapa(j.nombre)}</button>`).join('');
-  $('#mesa-rotar').hidden = m.ids.filter((id, i) => id && i > 0).length < 2;
   // con menos de dos sentados no hay partida que anotar
   $('#mesa-ok').disabled = puestos.length < 2;
+  // llena la mesa, el campo sigue sirviendo para apuntar a alguien de más
+  $('#mesa-alta-ok').textContent = puestos.length >= 4 ? 'Guardar' : 'Sentar';
 
   const eq = $('#mesa-equipos');
   if (eq.contains(document.activeElement)) return;   // no pisar lo que se teclea
@@ -1871,6 +1961,95 @@ function refrescarMesa() {
               placeholder="${escapa(nombreDerivado(t, m.ids) || DEFAULT_NAMES[t])}"
               value="${escapa(S.names[t] || '')}">
      </div>`).join('');
+}
+
+/* ============================================================
+   Jugadores de la mesa
+   ============================================================ */
+/* Se trabaja sobre una COPIA de las sillas, no sobre S.mesa.ids. Así "Guardar"
+   significa algo, salir a medias no deja la mesa descuadrada, y hay con qué
+   comparar para saber si cambió algo. No persiste: es estado de pantalla. */
+let jugBorrador = null, jugSilla = -1;
+
+const jugCambia = () => !!jugBorrador && !!S.mesa &&
+  jugBorrador.join() !== S.mesa.ids.join();
+// para anotar hacen falta los dos equipos; uno solo no es una partida
+const jugVale = () => !!jugBorrador && [0, 1].every(t => idsEquipo(t, jugBorrador).length > 0);
+
+function renderJug() {
+  const m = S.mesa;
+  if (!jugBorrador) { jugBorrador = [...m.ids]; jugSilla = -1; }
+  // la silla armada es la primera libre mientras no se elija otra
+  if (jugSilla < 0 || jugBorrador[jugSilla]) {
+    const libre = [0, 2, 1, 3].find(i => !jugBorrador[i]);
+    jugSilla = libre === undefined ? -1 : libre;
+  }
+
+  // Compañeros enfrente: el equipo t son las sillas t y t+2.
+  $('#jug-cols').innerHTML = [0, 1].map(t =>
+    `<div class="jug-col" style="--as:${colorDe(S.accents[t])}">
+      <div class="cab"><i></i><span>${escapa(teamName(t))}</span></div>
+      ${[t, t + 2].map(i => jugBorrador[i]
+        ? `<button class="jug-p" data-quitar="${i}" aria-label="Quitar a ${escapa(nombreDeId(jugBorrador[i]))}">
+             <span>${escapa(nombreDeId(jugBorrador[i]))}</span>
+             <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+           </button>`
+        : `<button class="jug-libre${i === jugSilla ? ' arm' : ''}" data-libre="${i}">
+             ${i === jugSilla ? 'Elige abajo' : '+ Sentar'}
+           </button>`).join('')}
+    </div>`).join('');
+
+  const puestos = jugBorrador.filter(Boolean);
+  $('#jug-conocidos').innerHTML = jugadoresVivos()
+    .filter(j => !puestos.includes(j.id))
+    .sort(porNombre)
+    .map(j => `<button data-sentar="${j.id}">${escapa(j.nombre)}</button>`).join('');
+
+  /* Con la mesa llena ya no se sienta a nadie, pero sí se puede apuntar gente:
+     apuntarla es justo lo que se hace ANTES de que le toque entrar, y esconder
+     el campo dejaba sin manera de hacerlo. */
+  const llena = puestos.length >= 4;
+  $('#jug-lbl').textContent = llena ? 'Gente guardada' : 'Sentar a alguien';
+  $('#jug-add').textContent = llena ? 'Guardar' : 'Sentar';
+  $('#jug-hint').textContent = llena
+    ? 'La mesa está completa. Toca a alguien para quitarlo y dejar sitio.'
+    : (jugVale() ? 'Toca a alguien para quitarlo, o elige a quién sentar.'
+                 : 'Cada equipo necesita al menos un jugador.');
+
+  $('#jug-guardar').hidden = !jugCambia();
+  $('#jug-ok').disabled = !jugVale();
+}
+
+/* Guardar. Si cambió QUIÉN juega —no solo dónde se sienta cada uno— y hay
+   puntos anotados, se pregunta antes: esos puntos los hizo otra gente y hay
+   noches en que se siguen usando y noches en que no. */
+async function guardarJug() {
+  if (!jugCambia() || !jugVale()) return;
+  const antes = [...S.mesa.ids], despues = [...jugBorrador];
+  const gente = a => a.filter(Boolean).slice().sort().join('|');
+  const otraGente = gente(antes) !== gente(despues);
+
+  let desdeCero = false;
+  if (S.rounds.length && otraGente) {
+    desdeCero = !await ask('Cambió quién juega',
+      `Hay ${S.scores[0]} y ${S.scores[1]} anotados con los de antes. ` +
+      'Se puede seguir con esos puntos, o empezar la mano de cero.',
+      'Seguir con los puntos', false, '', 'Empezar de cero');
+  }
+
+  S.mesa.ids = despues;
+  /* El nombre del equipo se rehace solo si no se lo habían puesto a mano: si
+     seguía siendo el derivado de los de antes, ahora diría a quién no juega. */
+  [0, 1].forEach(t => {
+    const n = (S.names[t] || '').trim();
+    if (!n || n === DEFAULT_NAMES[t] || n === nombreDerivado(t, antes))
+      S.names[t] = nombreDerivado(t, despues) || DEFAULT_NAMES[t];
+  });
+  nuevaTanda(identAhora());        // otra gente, otra cuenta de manos ganadas
+  jugBorrador = null; jugSilla = -1;
+  view = 'game';
+  if (desdeCero) { newGame(); return; }   // newGame ya guarda y pinta
+  save(); render();
 }
 
 // Dos filas de puntos de color, una por equipo. Se muestra el tono del tema en
@@ -1957,7 +2136,7 @@ function renderNombres() {
    del jugador, no de recorrer el historial: ese solo guarda 100 manos y a
    partir de ahí la cuenta empezaría a mentir sin avisar. */
 function renderJugadores() {
-  const js = jugadoresVivos().slice().sort((a, b) => (b.visto || 0) - (a.visto || 0));
+  const js = jugadoresVivos().slice().sort(porNombre);
   const gs = S.grupos.filter(g => g.estado === 'activo');
   const bloques = [];
 
@@ -2046,6 +2225,18 @@ const HVIEWS = [['detalle','Detalle'], ['lista','Lista'], ['pastillas','Pastilla
    único que se puede saber de ellas. */
 const colorMano = (r, t) => colorDe((r.accents || S.accents)[t]);
 
+/* Quiénes jugaron esa mano. Solo las formales lo llevan guardado: `r.mesa` son
+   los cuatro ids tal y como estaban sentados.
+
+   Se enseña únicamente cuando aporta algo. El nombre de equipo de una formal ya
+   es "Papo y Tita" salvo que le hayan puesto uno propio, así que repetirlo
+   debajo parecería un fallo antes que un dato. */
+const parejaMano = (r, t) => r.mesa ? nombreDerivado(t, r.mesa) : '';
+const jugadoresHTML = (r, t) => {
+  const p = parejaMano(r, t);
+  return p ? `<i class="hjug">${escapa(p)}</i>` : '';
+};
+
 /* Cómo se jugó esa mano. Sale de la identidad congelada en el registro, que ya
    distingue el cuarteto ('f:') de los dos nombres sueltos ('i:'). Las manos
    guardadas antes de la 2.00 no la traen y se quedan SIN etiqueta: entonces no
@@ -2068,9 +2259,11 @@ function manoHTML(r, vista) {
   const n0 = teamName(0, r.names), n1 = teamName(1, r.names);
 
   if (vista === 'lista') {
+    // los que ganaron; en informal no hay jugadores y queda el nombre de equipo
+    const gn = parejaMano(r, r.w) || (r.w === 0 ? n0 : n1);
     return `<div class="hrow lista">
       ${ficha}${marcador(r)}
-      <span class="hwin" style="color:${colorMano(r, r.w)}">${r.w === 0 ? n0 : n1}</span>
+      <span class="hwin" style="color:${colorMano(r, r.w)}">${gn}</span>
       <span class="hwhen">${fmtWhen(r.ts)}</span>
     </div>`;
   }
@@ -2084,12 +2277,14 @@ function manoHTML(r, vista) {
   }
   return `<div class="hrow">
     <div class="hmeta">${cuandoHTML(r)}
-      <span class="hmode">${ficha}<span>${r.target}</span></span></div>
+      <span class="hmode"><span>${r.target}</span>${ficha}</span></div>
     <div class="hline">
       ${marcador(r)}
-      <div class="hteams">${[n0, n1].map((nm, t) => t === r.w
-        ? `<span class="hteam win" style="color:${colorMano(r, t)}">${nm}</span>`
-        : `<span class="hteam">${nm}</span>`).join('<span class="hvs">·</span>')}</div>
+      <div class="hteams">${[n0, n1].map((nm, t) => `<span class="hcol">` +
+        (t === r.w
+          ? `<span class="hteam win" style="color:${colorMano(r, t)}">${nm}</span>`
+          : `<span class="hteam">${nm}</span>`) +
+        jugadoresHTML(r, t) + `</span>`).join('<span class="hvs">·</span>')}</div>
     </div>
   </div>`;
 }
@@ -2144,7 +2339,7 @@ function renderStats() {
         ${row('Formales', formales)}
         ${row('Informales', informales)}
         ${sinMarcar ? row('Sin marcar', sinMarcar) : ''}
-        ${yo ? row(`Ganadas por ${escapa(yo.nombre)}`, yo.ganadas || 0) : ''}
+        ${yo ? row('Ganadas por ti', yo.ganadas || 0) : ''}
       </div>
     </div>`;
 }
@@ -2367,12 +2562,14 @@ $('#pad').addEventListener('click', e => {
    ============================================================ */
 // checkLabel: si se pasa, sale una casilla y el botón no se activa hasta marcarla.
 // Es para lo que no se puede deshacer, donde un "Sí" de reflejo sale caro.
-function ask(title, msg, okLabel = 'Sí', danger = false, checkLabel = '') {
+function ask(title, msg, okLabel = 'Sí', danger = false, checkLabel = '', noLabel = 'Cancelar') {
   return new Promise(resolve => {
     const yes = $('#ask-yes'), no = $('#ask-no'), chk = $('#ask-check');
     $('#ask-title').textContent = title;
     $('#ask-msg').textContent = msg;
     yes.textContent = okLabel;
+    // el diálogo se reutiliza, así que la etiqueta del "no" se repone siempre
+    no.textContent = noLabel;
     yes.classList.toggle('danger', danger);
 
     chk.hidden = !checkLabel;
@@ -2571,24 +2768,62 @@ $('#mesa-conocidos').addEventListener('click', e => {
   S.mesa.ids[libre] = b.dataset.poner;
   buzz(8); save(); renderMesa();
 });
-/* Rotar: quien anota se queda donde está y los otros tres corren un sitio, que
-   es lo que pasa de verdad cuando se cambian de silla. Cambia con quién juegas,
-   por eso está a mano y no se hace solo. */
-$('#mesa-rotar').addEventListener('click', () => {
-  const m = S.mesa; if (!m) return;
-  /* Contra el reloj, igual que se reparte: el de la derecha pasa a enfrente,
-     el de enfrente a la izquierda y el de la izquierda a la derecha. Quien
-     anota no se mueve, así que los otros tres rotan entre ellos. */
-  const [izq, arr, der] = [m.ids[1], m.ids[2], m.ids[3]];
-  m.ids[2] = der; m.ids[1] = arr; m.ids[3] = izq;
-  buzz(10); save(); renderMesa();
-});
 $('#mesa-nuevo').addEventListener('click', () => {
   S.mesa = mesaVacia();
   S.mesa.nueva = true;
   buzz(8); save(); renderMesa();
 });
 $('#mesa-gchips').addEventListener('click', e => usarGrupo(e));
+
+/* Dar de alta a alguien desde la mesa. Si hay silla libre se sienta —contra el
+   reloj, como al tocar un conocido—; si no, queda apuntado para otro día. */
+$('#mesa-alta-ok').addEventListener('click', () => {
+  const el = $('#mesa-alta-nombre'), nom = el.value.trim();
+  if (!nom) { el.focus(); return; }
+  const id = altaJugador(nom);
+  if (!id) { toast('Ya no caben más jugadores guardados'); return; }
+  const libre = [3, 2, 1].find(i => !S.mesa.ids[i]);
+  if (libre === undefined) toast('Guardado. La mesa ya está llena');
+  else S.mesa.ids[libre] = id;
+  el.value = ''; buzz(8); save(); renderMesa();
+});
+$('#mesa-alta-nombre').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); $('#mesa-alta-ok').click(); }
+});
+
+/* Toda la pantalla de jugadores por delegación: se repinta entera en cada
+   toque, así que enganchar en los botones no serviría de nada. */
+$('#sc-jug').addEventListener('click', e => {
+  const q = e.target.closest('[data-quitar]');
+  if (q) {
+    buzz(10);
+    jugSilla = +q.dataset.quitar;     // el hueco que se acaba de abrir queda armado
+    jugBorrador[jugSilla] = null;
+    renderJug(); return;
+  }
+  const l = e.target.closest('[data-libre]');
+  if (l) { buzz(6); jugSilla = +l.dataset.libre; renderJug(); return; }
+  const p = e.target.closest('[data-sentar]');
+  if (p) {
+    if (jugSilla < 0) { toast('Quita a alguien para hacerle sitio'); return; }
+    jugBorrador[jugSilla] = p.dataset.sentar;
+    buzz(8); renderJug(); return;
+  }
+});
+$('#jug-add').addEventListener('click', () => {
+  const el = $('#jug-nombre'), nom = el.value.trim();
+  if (!nom) { el.focus(); return; }
+  const id = altaJugador(nom);
+  if (!id) { toast('Ya no caben más jugadores guardados'); return; }
+  // con sitio se sienta; sin sitio queda apuntado, que es para lo que sirve
+  if (jugSilla >= 0) jugBorrador[jugSilla] = id;
+  else toast('Guardado. Quita a alguien para sentarlo');
+  el.value = ''; buzz(8); save(); renderJug();
+});
+$('#jug-nombre').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); $('#jug-add').click(); }
+});
+$('#jug-ok').addEventListener('click', guardarJug);
 
 // nombres de equipo desde Ajustes: en vivo sin render(), se guarda al soltar
 $('#cfg-nombres').addEventListener('input', e => {

@@ -161,6 +161,16 @@ Formal needs a name: `puedeFormal()` is false when `S.anotador` is empty, and wi
 
 `#sc-mesa` is the square table. It has **two** paint functions and the split is not cosmetic: `renderMesa()` rebuilds the markup, `refrescarMesa()` only updates the derived bits. The seat `change` handler must call `refrescarMesa()` — calling the full one there destroys the sibling `<input>`s mid-edit, which showed up as only two of four players ever being registered.
 
+### The Jugadores screen edits a draft, not the table
+
+`#sc-jug` (`view === 'jugadores'`, reachable only from the board and only in Formal) changes who is at the table without leaving the scoring screen. It works on `jugBorrador`, a **copy** of `S.mesa.ids` — that is what makes "Guardar" mean something, and what makes leaving without saving a no-op. Like the other screen state, it doesn't persist; `render()` clears it whenever `view` moves away.
+
+`guardarJug()` distinguishes **who is playing** from **where they sit**: it compares the sorted id sets, and only asks about the points in progress when someone actually entered or left. Reshuffling the same four asks nothing. The two answers are "keep the points" and "start from scratch"; that second label is why `ask()` grew a `noLabel` parameter.
+
+Saving runs `nuevaTanda(identAhora())`, so changing who plays resets the games tally — the same rule as everywhere else.
+
+Two things worth knowing: seat 0 can be emptied here, but `renderMesa()` forces the scorekeeper back into it the next time the table screen opens; and a name typed in with the table full is added to the catalogue without being seated, which is the point — you register people before they sit down.
+
 ### Session and idle reset
 
 `checkIdle()` resets the session (mode, scoreboard, games won) after `IDLE_MS` of inactivity, but **preserves `history`, `names`, `theme`, `style` and `target`**. It fires when the app becomes visible again and on a `setInterval` every minute.
