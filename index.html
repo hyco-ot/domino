@@ -848,7 +848,7 @@ button{border:0;background:none;cursor:pointer}
         <div class="jchips" id="mesa-conocidos"></div>
         <div class="jug-nuevo" id="mesa-alta" style="margin-top:14px">
           <input id="mesa-alta-nombre" maxlength="18" spellcheck="false" autocomplete="off"
-                 placeholder="Alguien nuevo">
+                 placeholder="Buscar o añadir">
           <button class="linky" id="mesa-alta-ok">Sentar</button>
         </div>
 
@@ -890,7 +890,7 @@ button{border:0;background:none;cursor:pointer}
         <div class="jchips" id="jug-conocidos"></div>
         <div class="jug-nuevo" id="jug-nuevo">
           <input id="jug-nombre" maxlength="18" spellcheck="false" autocomplete="off"
-                 placeholder="Alguien nuevo">
+                 placeholder="Buscar o añadir">
           <button class="linky" id="jug-add">Sentar</button>
         </div>
       </div>
@@ -1260,7 +1260,7 @@ const DEFAULT_ACCENTS = ['azul', 'terra'];
 /* ---- jugadores y grupos ----
    Topes de verdad, no de adorno: save() se traga los errores de cuota, así que
    una lista sin límite no falla, sencillamente deja de guardar en silencio. */
-const MAX_JUGADORES = 24, MAX_GRUPOS = 12, MAX_COLORES = 20;
+const MAX_JUGADORES = 64, MAX_GRUPOS = 12, MAX_COLORES = 20;
 const GRUPO_VECES   = 3;                    // días distintos para considerarlo habitual
 const GRUPO_VENTANA = 60 * 24 * 3600 * 1000; // 60 días: tres noches en medio año no es costumbre
 
@@ -1407,6 +1407,13 @@ const jugadoresVivos = () => S.jugadores.filter(j => !j.borrado);
    conocido con el dedo se hace mirando, y "el último que jugó" no ayuda a
    mirar. Antes iban por visto, que además cambiaba de orden solo. */
 const porNombre = (a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' });
+
+/* Buscar por lo tecleado, sin distinguir mayusculas ni tildes: nadie escribe
+   "Martín" con tilde cuando esta buscando con el pulgar. No persiste: es el
+   estado de un campo de texto. */
+let jugFiltro = '', mesaFiltro = '';
+const pelado = t => (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const casaNombre = (nombre, filtro) => !filtro || pelado(nombre).includes(pelado(filtro));
 
 /* Quien anota, como jugador del catálogo. Es solo lectura a propósito:
    altaJugador() lo daría de alta si no estuviera, y pintar una pantalla no
@@ -1701,7 +1708,11 @@ function render() {
   // los jugadores de la mesa solo existen en Formal, y solo con partida abierta
   if (view === 'jugadores' && !(inGame && S.tipo === 'formal' && S.mesa)) view = 'game';
   // salir de la pantalla tira el borrador: lo que no se guardó no cuenta
-  if (view !== 'jugadores') { jugBorrador = null; jugSilla = -1; }
+  if (view !== 'jugadores') {
+    jugBorrador = null; jugSilla = -1;
+    jugFiltro = ''; $('#jug-nombre').value = '';
+  }
+  if (view !== 'mesa') { mesaFiltro = ''; $('#mesa-alta-nombre').value = ''; }
   $('#sc-mode').classList.toggle('on',   !inGame && view === 'game');
   $('#sc-mesa').classList.toggle('on',   !inGame && view === 'mesa');
   $('#sc-game').classList.toggle('on',    inGame && view === 'game');
@@ -1950,7 +1961,7 @@ function refrescarMesa() {
   const puestos = m.ids.filter(Boolean);
 
   $('#mesa-conocidos').innerHTML = jugadoresVivos()
-    .filter(j => !puestos.includes(j.id))
+    .filter(j => !puestos.includes(j.id) && casaNombre(j.nombre, mesaFiltro))
     .sort(porNombre)
     .map(j => `<button data-poner="${j.id}">${escapa(j.nombre)}</button>`).join('');
   // con menos de dos sentados no hay partida que anotar
@@ -2006,9 +2017,9 @@ function renderJug() {
     </div>`).join('');
 
   const puestos = jugBorrador.filter(Boolean);
-  $('#jug-conocidos').innerHTML = jugadoresVivos()
-    .filter(j => !puestos.includes(j.id))
-    .sort(porNombre)
+  const libres = jugadoresVivos().filter(j => !puestos.includes(j.id));
+  const vistos = libres.filter(j => casaNombre(j.nombre, jugFiltro)).sort(porNombre);
+  $('#jug-conocidos').innerHTML = vistos
     .map(j => `<button data-sentar="${j.id}">${escapa(j.nombre)}</button>`).join('');
 
   /* Con la mesa llena ya no se sienta a nadie, pero sí se puede apuntar gente:
@@ -2017,10 +2028,12 @@ function renderJug() {
   const llena = puestos.length >= 4;
   $('#jug-lbl').textContent = llena ? 'Gente guardada' : 'Sentar a alguien';
   $('#jug-add').textContent = llena ? 'Guardar' : 'Sentar';
-  $('#jug-hint').textContent = llena
-    ? 'La mesa está completa. Toca a alguien para quitarlo y dejar sitio.'
-    : (jugVale() ? 'Toca a alguien para quitarlo, o elige a quién sentar.'
-                 : 'Cada equipo necesita al menos un jugador.');
+  $('#jug-hint').textContent =
+      (jugFiltro && !vistos.length)
+        ? `Nadie se llama así todavía. Toca ${llena ? 'Guardar' : 'Sentar'} para darlo de alta.`
+    : llena ? 'La mesa está completa. Toca a alguien para quitarlo y dejar sitio.'
+    : jugVale() ? 'Toca a alguien para quitarlo, o elige a quién sentar. Escribe para buscar.'
+    : 'Cada equipo necesita al menos un jugador.';
 
   $('#jug-guardar').hidden = !jugCambia();
   $('#jug-ok').disabled = !jugVale();
@@ -2792,8 +2805,11 @@ $('#mesa-alta-ok').addEventListener('click', () => {
   const libre = [3, 2, 1].find(i => !S.mesa.ids[i]);
   if (libre === undefined) toast('Guardado. La mesa ya está llena');
   else S.mesa.ids[libre] = id;
-  el.value = ''; buzz(8); save(); renderMesa();
+  el.value = ''; mesaFiltro = ''; buzz(8); save(); renderMesa();
 });
+$('#mesa-alta-nombre').addEventListener('input', e => {
+  mesaFiltro = e.target.value; refrescarMesa();      // refrescar, no renderMesa:
+});                                                  // el completo mata el campo
 $('#mesa-alta-nombre').addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); $('#mesa-alta-ok').click(); }
 });
@@ -2825,8 +2841,9 @@ $('#jug-add').addEventListener('click', () => {
   // con sitio se sienta; sin sitio queda apuntado, que es para lo que sirve
   if (jugSilla >= 0) jugBorrador[jugSilla] = id;
   else toast('Guardado. Quita a alguien para sentarlo');
-  el.value = ''; buzz(8); save(); renderJug();
+  el.value = ''; jugFiltro = ''; buzz(8); save(); renderJug();
 });
+$('#jug-nombre').addEventListener('input', e => { jugFiltro = e.target.value; renderJug(); });
 $('#jug-nombre').addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); $('#jug-add').click(); }
 });
