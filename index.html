@@ -115,6 +115,8 @@ button{border:0;background:none;cursor:pointer}
 .mode-card svg{height:104px;width:auto}
 .mode-name{font-weight:700;font-size:17px;letter-spacing:-.01em}
 .mode-sub{font-size:11.5px;color:var(--dim);margin-top:-9px}
+/* vacio no debe dejar hueco: la tarjeta de jugadores no lleva subtitulo */
+.mode-sub:empty{display:none}
 .meta-note{text-align:center;font-size:13px;color:var(--dim)}
 .meta-note b{color:var(--txt);font-weight:700}
 
@@ -770,12 +772,12 @@ button{border:0;background:none;cursor:pointer}
         <div class="modes">
           <button class="mode-card" data-tipo="formal">
             <span class="tipo-ico"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3.4"/><path d="M2.5 20v-1.6A4 4 0 0 1 6.5 14.4h5A4 4 0 0 1 15.5 18.4V20"/><circle cx="18" cy="7.5" r="2.6"/><path d="M17 14.5h1.6a3 3 0 0 1 3 3V20"/></svg></span>
-            <span class="mode-name">Formal</span>
-            <span class="mode-sub">Con jugadores</span>
+            <span class="mode-name">Anotar con jugadores</span>
+            <span class="mode-sub"></span>
           </button>
           <button class="mode-card" data-tipo="informal">
             <span class="tipo-ico"><svg viewBox="0 0 24 24"><path d="M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12z"/></svg></span>
-            <span class="mode-name">Informal</span>
+            <span class="mode-name">Blitz</span>
             <span class="mode-sub">Sin preguntar quién</span>
           </button>
         </div>
@@ -1858,8 +1860,7 @@ function renderLanzador() {
 
   const bf = $('[data-tipo="formal"]');
   bf.classList.toggle('off', !puedeFormal());
-  $('.mode-sub', bf).textContent = puedeFormal()
-    ? 'Con jugadores' : 'Pon tu nombre en Ajustes';
+  $('.mode-sub', bf).textContent = puedeFormal() ? '' : 'Pon tu nombre en Ajustes';
   renderGrupoChips();
 }
 
@@ -2249,9 +2250,10 @@ const jugadoresHTML = (r, t) => {
 
    Va en detalle y en pastillas, no en lista: esa fila es una sola línea y ya
    lleva ficha, marcador, ganador y hora. */
-const tipoMano = r => !r.ident ? '' : (r.ident.startsWith('f:') ? 'Formal' : 'Informal');
+const TIPO_TXT = { formal: 'Con jugadores', informal: 'Blitz' };
+const tipoMano = r => !r.ident ? '' : (r.ident.startsWith('f:') ? 'formal' : 'informal');
 const cuandoHTML = r => {
-  const t = tipoMano(r);
+  const t = TIPO_TXT[tipoMano(r)] || '';
   return `<span class="hcuando"><span class="hwhen">${fmtWhen(r.ts)}</span>` +
          (t ? `<span class="htipo">${t}</span>` : '') + '</span>';
 };
@@ -2316,8 +2318,8 @@ function renderStats() {
      Formales + informales puede no dar el total: las manos guardadas antes de
      la 2.00 no saben cómo se jugaron, y no se les inventa. Cuando las hay se
      dicen aparte para que las cuentas cuadren a la vista. */
-  const formales   = h.filter(r => tipoMano(r) === 'Formal').length;
-  const informales = h.filter(r => tipoMano(r) === 'Informal').length;
+  const formales   = h.filter(r => tipoMano(r) === 'formal').length;
+  const informales = h.filter(r => tipoMano(r) === 'informal').length;
   const sinMarcar  = h.length - formales - informales;
   const yo = anotadorJugador();
 
@@ -2341,8 +2343,8 @@ function renderStats() {
       <div class="cfg-lbl">Resumen</div>
       <div class="stat-card">
         ${row('Manos guardadas', h.length)}
-        ${row('Formales', formales)}
-        ${row('Informales', informales)}
+        ${row(TIPO_TXT.formal, formales)}
+        ${row(TIPO_TXT.informal, informales)}
         ${sinMarcar ? row('Sin marcar', sinMarcar) : ''}
         ${yo ? row('Ganadas por ti', yo.ganadas || 0) : ''}
       </div>
