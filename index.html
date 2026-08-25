@@ -95,14 +95,29 @@ button{border:0;background:none;cursor:pointer}
 /* el fundido va sobre el elemento, no sobre sus hijos: lo que cambia al cambiar
    de modo es una pieza suelta, no una pantalla entera */
 @keyframes aparece   {from{opacity:0}}
+/* Lo que acaba de entrar baja a su sitio: la fila del log y la cifra. Solo
+   cuando de verdad entra algo — la bandera la pone addRound y se gasta en el
+   repintado siguiente, para que abrir un menú no lo repita. */
+@keyframes entraFila {from{opacity:0;transform:translateY(-80%)}}
+@keyframes bajaCifra {from{opacity:.25;transform:translateY(-12%)}}
+@keyframes bajaBloque{from{opacity:0;transform:translateY(-9px)}}
 .anim-izq   > *{animation:entraIzq   .26s cubic-bezier(.2,.8,.2,1) both}
 .anim-der   > *{animation:entraDer   .26s cubic-bezier(.2,.8,.2,1) both}
 .anim-abajo > *{animation:entraAbajo .24s cubic-bezier(.2,.8,.2,1) both}
 .anim-fade     {animation:aparece     .22s ease both}
-/* a quien pida menos movimiento, ninguno */
-@media (prefers-reduced-motion: reduce) {
-  .anim-izq > *, .anim-der > *, .anim-abajo > *, .anim-fade{animation:none}
-}
+.anim-baja     {animation:bajaBloque  .24s cubic-bezier(.2,.8,.2,1) both}
+.erow.entra    {animation:entraFila   .28s cubic-bezier(.2,.8,.2,1) both}
+.score.baja    {animation:bajaCifra   .30s cubic-bezier(.2,.8,.2,1) both}
+/* El Clásico es el modo pelado: ya se queda sin reacciones y sin atajos, y
+   también sin animaciones. Una sola regla las apaga todas, en vez de repetir
+   el "solo en chercha" en cada una de ellas. */
+[data-style="mono"] .anim-izq > *,
+[data-style="mono"] .anim-der > *,
+[data-style="mono"] .anim-abajo > *,
+[data-style="mono"] .anim-fade,
+[data-style="mono"] .anim-baja,
+[data-style="mono"] .erow.entra,
+[data-style="mono"] .score.baja{animation:none}
 
 /* ---------- barra superior ---------- */
 .top{display:flex;align-items:center;gap:6px;padding:10px 12px 4px;min-height:52px}
@@ -130,7 +145,16 @@ button{border:0;background:none;cursor:pointer}
 .kicker{text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:var(--dim);
   text-align:center;font-weight:600}
 .modes{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:14px}
-.mode-card.ancha{grid-column:1 / -1}
+/* Los modos van en tira: uno por fila, la ficha a la izquierda y el nombre con
+   sus puntos al lado. En rejilla de dos competían por tamaño entre ellos y lo
+   que se compara son los puntos, no la ficha. */
+.modes.tira{display:flex;flex-direction:column;gap:11px}
+.tira .mode-card{display:grid;grid-template-columns:auto 1fr;align-items:center;
+  column-gap:16px;padding:13px 18px;border-radius:18px;text-align:left}
+.tira .mode-card .tile{grid-row:1 / span 2;display:grid;place-items:center}
+.tira .mode-card svg{height:44px}
+.tira .mode-name{align-self:end}
+.tira .mode-sub{align-self:start;margin-top:2px}
 .mode-card{background:var(--elev);border:1px solid var(--line);border-radius:22px;
   padding:24px 10px 18px;display:flex;flex-direction:column;align-items:center;gap:14px;
   box-shadow:var(--shadow);transition:transform .12s ease}
@@ -424,9 +448,10 @@ button{border:0;background:none;cursor:pointer}
 .menos[hidden], .mas2[hidden]{display:none}
 .menos:disabled, .mas2:disabled{opacity:.3}
 .menos:active, .mas2:active{background:var(--sunk)}
-/* con "+1" de etiqueta el botón se queda en nada; se le da cuerpo para que
-   siga siendo el que se busca sin mirar */
-.acts.pm .add{min-width:104px}
+/* Los tres del mismo cuadrado: lo que distingue al de en medio es el color,
+   no el tamaño, y así los tres pesan lo mismo alrededor del marcador. */
+.acts.pm .add{width:40px;height:40px;padding:0;border-radius:13px;
+  display:grid;place-items:center}
 
 /* ---------- puntos anotados de cada equipo (el más nuevo arriba) ---------- */
 .entries{flex:1;min-height:0;width:100%;overflow-y:auto;scrollbar-width:none;
@@ -913,15 +938,12 @@ button{border:0;background:none;cursor:pointer}
         </div>
       </div>
 
-      <!-- paso 2: qué dominó -->
+      <!-- paso 2: qué dominó. En tira vertical y por puntos de menos a más:
+           se leen de arriba abajo y cada uno dice los suyos al lado, que es lo
+           que de verdad se compara al elegir. -->
       <div id="paso-modo" hidden>
         <p class="kicker">Elige el modo</p>
-        <div class="modes">
-          <button class="mode-card ancha" data-mode="manos">
-            <span class="tile"></span>
-            <span class="mode-name">Por manos</span>
-            <span class="mode-sub"></span>
-          </button>
+        <div class="modes tira">
           <button class="mode-card" data-mode="dom">
             <span class="tile"></span>
             <span class="mode-name">Dominicano</span>
@@ -932,10 +954,15 @@ button{border:0;background:none;cursor:pointer}
             <span class="mode-name">Cubano</span>
             <span class="mode-sub"></span>
           </button>
+          <button class="mode-card" data-mode="manos">
+            <span class="tile"></span>
+            <span class="mode-name">Por manos</span>
+            <span class="mode-sub"></span>
+          </button>
         </div>
       </div>
 
-      <p class="meta-note">Cada modo trae sus puntos. Se cambian en <b>Ajustes</b>.</p>
+      <p class="meta-note">Los puntos se pueden cambiar al iniciar el juego.</p>
       <button class="upd"></button>
       <button class="install" hidden>
         <svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
@@ -1651,10 +1678,13 @@ let mesaCustom = false;      // ni este: el acordeón de la mesa
 let sillaAbierta = -1;       // qué silla se está llenando, o -1
 let cfgJugAbierto = false;   // el acordeón de jugadores en Ajustes
 let cuantaAbierta = false;   // el de la tanda, en el tablero
+/* Qué equipo acaba de anotar, para que su fila y su cifra entren bajando. No
+   persiste ni cuenta como estado: vale para un solo repintado. */
+let filaNueva = -1;
 
 /* Una animación de entrada, una vez. No persiste ni se guarda en el estado: se
    pone, se deja correr y se quita, para que el siguiente repintado no la repita. */
-const ANIMS = ['anim-izq', 'anim-der', 'anim-abajo', 'anim-fade'];
+const ANIMS = ['anim-izq', 'anim-der', 'anim-abajo', 'anim-fade', 'anim-baja'];
 function animar(sel, clase) {
   const el = $(sel); if (!el) return;
   el.classList.remove(...ANIMS);
@@ -2119,7 +2149,18 @@ function render() {
     const list = $('.entries', el);
     list.innerHTML = pm ? manosHTML(i) : entriesHTML(i);
     list.scrollTop = 0;                 // lo recién anotado va arriba del todo
+    /* La cifra no se rehace, solo cambia de texto, asi que la clase se le quita
+       SIEMPRE y se le vuelve a poner solo si acaba de anotar: quitarla dentro
+       del if la dejaba pegada para siempre desde la primera anotacion. */
+    const cifra = $('.score', el);
+    cifra.classList.remove('baja');
+    if (filaNueva === i) {
+      if (list.firstElementChild) list.firstElementChild.classList.add('entra');
+      void cifra.offsetWidth;            // sin esto no rearranca si venia puesta
+      cifra.classList.add('baja');
+    }
   });
+  filaNueva = -1;                        // se gasta en un solo repintado
 
   // con la mano cerrada y el resultado ya cerrado, dejar volver a él
   const hayResultado = S.over >= 0 && winSeen;
@@ -2262,7 +2303,7 @@ const mesaPorManos = m => !!m && m.modo === 'manos';
 /* Mejor de 5 son tres manos: la mitad más una. Siempre impar, para que no pueda
    quedar en tablas. */
 // impares, para que una tanda no pueda quedar en tablas
-const MEJOR_MIN = 3, MEJOR_MAX = 25;
+const MEJOR_MIN = 3, MEJOR_MAX = 41;
 /* Siempre impar: una tanda de número par puede quedar en tablas. Por eso se
    mueve de dos en dos, y por eso un valor par guardado se descarta. */
 const mejorDe = () => {
@@ -3036,6 +3077,7 @@ function addRound(team, pts, pase = 0, capi = false, tran = false) {
   if (tran) r.tranque = 1;      // la mano se trancó; no suma, pero queda dicho
   S.rounds.push(r);
   recount();
+  filaNueva = team;                      // lo que entra, entra bajando
   save(); render();                      // pintar antes: la reacción usa --wc ya puesto
   if (S.over === team) {                 // ganar manda: una sola reacción
     buzz([18, 60, 18, 60, 40]);
@@ -3321,6 +3363,7 @@ function elegirAcento(yo, k) {
 // nombre del que anota: en vivo sin render(), para no perder el foco
 $('#cfg-jug-btn').addEventListener('click', () => {
   cfgJugAbierto = !cfgJugAbierto; buzz(8); renderConfig();
+  if (cfgJugAbierto) animar('#cfg-jug-panel', 'anim-baja');
 });
 $('#cfg-anotador').addEventListener('input', e => { S.anotador = e.target.value; });
 $('#cfg-anotador').addEventListener('change', e => {
@@ -3443,6 +3486,7 @@ $('#mesa-nuevo').addEventListener('click', () => {
 $('#mesa-gchips').addEventListener('click', e => usarGrupo(e));
 $('#mesa-custom-btn').addEventListener('click', () => {
   mesaCustom = !mesaCustom; buzz(8); refrescarMesa();
+  if (mesaCustom) animar('#mesa-custom', 'anim-baja');
 });
 
 /* Cuántos son y si juegas: las dos cambian de quién es cada silla, así que las
@@ -3529,12 +3573,14 @@ $('#jug-nombre').addEventListener('keydown', e => {
 $('#jug-ok').addEventListener('click', guardarJug);
 $('#jug-extra-btn').addEventListener('click', () => {
   jugExtra = !jugExtra; buzz(8); renderJug();
+  if (jugExtra) animar('#jug-extra', 'anim-baja');
 });
 
 /* Los jugadores solo existen en Formal, y Formal necesita un nombre. Cada
    "no se puede" dice lo que falta para poder. */
 $('#btn-cuanta').addEventListener('click', () => {
   cuantaAbierta = !cuantaAbierta; buzz(8); render();
+  if (cuantaAbierta) animar('#cuanta', 'anim-baja');
 });
 $('#cuanta').addEventListener('click', e => {
   const b = e.target.closest('[data-mejor-paso]'); if (!b) return;
@@ -3895,8 +3941,7 @@ setInterval(() => {
 $$('[data-mode]').forEach(card => {
   const k = card.dataset.mode, m = MODES[k];
   $('.tile', card).innerHTML = modoSVG(k);
-  $('.mode-sub', card).textContent = k === 'manos'
-    ? 'Sin puntos · solo quién gana' : `Doble ${m.pips} · ${m.target} pts`;
+  $('.mode-sub', card).textContent = k === 'manos' ? 'Sin puntos' : `${m.target} pts`;
 });
 
 /* ============================================================
