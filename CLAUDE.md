@@ -168,6 +168,16 @@ Two consequences to keep in mind:
 
 **Blitz forces `BLITZ_ACCENTS` (azul/rojo) on entry**, overriding whatever `nuevaTanda` remembered. Colours belong to people, and Blitz never asks who is playing — so there they belong to nobody. It is also the only mode with no way to change them, since the colour picker lives on the Jugadores screen.
 
+### The habitual group offers itself
+
+`contarAparicion()` has been counting since 2.00: a quartet that produces at least one saved hand scores one *appearance*, at most one per calendar day. `dayKey()` does the day part, and it is not optional — `IDLE_MS` is an hour, so a family that plays, has dinner and comes back builds two tables the same evening.
+
+`ofrecerGrupo()` is what finally uses it. At `GRUPO_VECES` (3) distinct days inside `GRUPO_VENTANA` (60), it offers once to save the quartet. **It never saves on its own**: a saved group is the first thing on the launcher and changes what you tap, so creating one unasked moves someone's buttons behind their back. "Ahora no" sets `rechazado` and it is offered a second and final time at `GRUPO_INSISTE` (8); a second no sets `nunca`.
+
+It fires only at quiet moments — `momentoTranquilo()`, shared with `autoApply()`: not with the pad open, not over another dialog, not with a won hand on screen. The triggers are closing the winner screen, opening the app, and returning to it.
+
+The counting lives on the group record, **never recomputed from `S.history`**: history is a 100-hand window, and a habit that forms over three months would erase its own evidence.
+
 ### The table asks who and how many
 
 `S.mesa` gained `cuantos` (4 or 2) and `yoJuego`. Both are read through `mesaCuantos()` / `yoJuego()`, which default to 4 and true — **a mesa stored before this has neither field, and `load()`'s shallow merge cannot fill a nested record**. Changing either calls `rehacerMesa()`, which empties the table and re-seats only the scorekeeper, and only if they play: the seats stop meaning the same thing, so what was in them no longer holds.

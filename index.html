@@ -928,14 +928,19 @@ button{border:0;background:none;cursor:pointer}
           <button class="linky" id="mesa-alta-ok">Sentar</button>
         </div>
 
+        <!-- Plegado: armar la mesa es sentar gente, y los nombres y los colores
+             casi siempre se quedan como están. -->
         <div style="margin-top:22px">
-          <div class="cfg-lbl">Nombres de los equipos</div>
-          <div id="mesa-equipos"></div>
-        </div>
-
-        <div style="margin-top:22px">
-          <div class="cfg-lbl">Colores</div>
-          <div id="mesa-accents"></div>
+          <button class="acord" id="mesa-custom-btn" aria-expanded="false">
+            <span>Customizar</span>
+            <svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div id="mesa-custom" hidden>
+            <div class="cfg-lbl" style="margin-top:18px">Nombres de los equipos</div>
+            <div id="mesa-equipos"></div>
+            <div class="cfg-lbl" style="margin-top:22px">Colores</div>
+            <div id="mesa-accents"></div>
+          </div>
         </div>
 
         <div style="margin-top:24px">
@@ -978,7 +983,7 @@ button{border:0;background:none;cursor:pointer}
            empujaría la lista de gente fuera de la pantalla. -->
       <div>
         <button class="acord" id="jug-extra-btn" aria-expanded="false">
-          <span>Extra configuración</span>
+          <span>Customizar</span>
           <svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
         </button>
         <div id="jug-extra" hidden>
@@ -1511,6 +1516,7 @@ const porNombre = (a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity
    estado de un campo de texto. */
 let jugFiltro = '', mesaFiltro = '', jugExtra = false;
 let cuantaAbierta = false;   // no persiste: es un desplegable del tablero
+let mesaCustom = false;      // ni este: el acordeón de la mesa
 const pelado = t => (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const casaNombre = (nombre, filtro) => !filtro || pelado(nombre).includes(pelado(filtro));
 
@@ -1604,6 +1610,63 @@ function contarAparicion() {
 
 // listos para ofrecerse en el lanzador
 const gruposActivos = () => S.grupos.filter(g => g.estado === 'activo');
+
+// se insiste una sola vez, y ya con la costumbre bien hecha
+const GRUPO_INSISTE = 8;
+
+/* El cuarteto que ya es costumbre: GRUPO_VECES días distintos, y dentro de una
+   ventana de dos meses — tres noches repartidas en medio año no son costumbre,
+   son casualidad. A quien dijo que no se le vuelve a ofrecer una vez, mucho más
+   adelante; si repite el no, no se le pregunta nunca más. */
+function grupoQueOfrecer() {
+  const listo = g => g.estado === 'rechazado' ? g.veces >= GRUPO_INSISTE
+                                              : g.veces >= GRUPO_VECES;
+  return S.grupos.find(g =>
+    (g.estado === 'tanteo' || g.estado === 'rechazado') &&
+    grupoCompleto(g.ids) &&
+    (g.ultima - g.primera) <= GRUPO_VENTANA &&
+    listo(g)) || null;
+}
+
+// "Junior, Tita, Cheo y Mimi"
+const listaNombres = ids => {
+  const ns = ids.map(nombreDeId).filter(Boolean);
+  return ns.length < 2 ? ns.join('') : ns.slice(0, -1).join(', ') + ' y ' + ns[ns.length - 1];
+};
+
+let preguntandoGrupo = false;   // no persiste: evita dos carteles a la vez
+
+/* Se ofrece guardar el cuarteto. Un grupo guardado deja la mesa lista de un
+   toque desde el inicio, con sus colores, sus nombres y su modo. */
+async function ofrecerGrupo() {
+  if (preguntandoGrupo || !momentoTranquilo()) return;
+  const g = grupoQueOfrecer();
+  if (!g) return;
+  preguntandoGrupo = true;
+  try {
+    const si = await ask('¿Los guardo como juego común?',
+      `${listaNombres(g.ids)} ya llevan ${g.veces} días jugando juntos. ` +
+      'Guardarlos deja la mesa lista de un toque desde el inicio, con sus ' +
+      'colores, sus nombres y su modo.',
+      'Guardar', false, '', 'Ahora no');
+    if (si) {
+      Object.assign(g, {
+        estado: 'activo',
+        nombres: [teamName(0), teamName(1)],
+        accents: [...S.accents],
+        mode: g.mode || S.mode || 'dom',
+        target: g.target || MODES[g.mode || S.mode || 'dom'].target
+      });
+      toast('Guardado. Lo tienes en el inicio');
+    } else {
+      // el primer no aplaza; el segundo cierra el tema para siempre
+      g.estado = g.estado === 'rechazado' ? 'nunca' : 'rechazado';
+    }
+    save(); render();
+  } finally {
+    preguntandoGrupo = false;
+  }
+}
 
 /* La cuenta de manos ("Segunda mano") es de ESTA gente, no de la app. Al
    sentarse otros, vuelve a empezar; si se sientan los mismos —cambiar de modo
@@ -1815,7 +1878,7 @@ function render() {
     jugFiltro = ''; $('#jug-nombre').value = '';
     jugExtra = false;                      // vuelve plegado, como se encontro
   }
-  if (view !== 'mesa') { mesaFiltro = ''; $('#mesa-alta-nombre').value = ''; }
+  if (view !== 'mesa') { mesaFiltro = ''; $('#mesa-alta-nombre').value = ''; mesaCustom = false; }
   $('#sc-mode').classList.toggle('on',   !inGame && view === 'game');
   $('#sc-mesa').classList.toggle('on',   !inGame && view === 'mesa');
   $('#sc-game').classList.toggle('on',    inGame && view === 'game');
@@ -2176,16 +2239,24 @@ function refrescarMesa() {
   $('#mesa-ok').disabled = !mesaVale(m);
   // llena la mesa, el campo sigue sirviendo para apuntar a alguien de más
   $('#mesa-alta-ok').textContent = puestos.length >= 4 ? 'Guardar' : 'Sentar';
+  $('#mesa-custom-btn').setAttribute('aria-expanded', mesaCustom);
+  $('#mesa-custom').hidden = !mesaCustom;
 
   const eq = $('#mesa-equipos');
   if (eq.contains(document.activeElement)) return;   // no pisar lo que se teclea
-  eq.innerHTML = [0, 1].map(t =>
-    `<div class="eqrow" style="--as:${colorDe(S.accents[t])}">
+  /* El nombre que se pondría solo va de sugerencia, no escrito en el campo: así
+     para poner uno propio se escribe y ya, sin borrar antes lo que había. Solo
+     se escribe de verdad lo que alguien tecleó a mano. */
+  eq.innerHTML = [0, 1].map(t => {
+    const sugerido = nombreDerivado(t, m.ids) || DEFAULT_NAMES[t];
+    const puesto = (S.names[t] || '').trim();
+    const propio = (!puesto || puesto === DEFAULT_NAMES[t] || puesto === sugerido) ? '' : puesto;
+    return `<div class="eqrow" style="--as:${colorDe(S.accents[t])}">
        <i></i>
        <input data-eqnom="${t}" maxlength="18" spellcheck="false" autocomplete="off"
-              placeholder="${escapa(nombreDerivado(t, m.ids) || DEFAULT_NAMES[t])}"
-              value="${escapa(S.names[t] || '')}">
-     </div>`).join('');
+              placeholder="${escapa(sugerido)}" value="${escapa(propio)}">
+     </div>`;
+  }).join('');
 }
 
 /* ============================================================
@@ -3026,9 +3097,16 @@ $('#mesa-conocidos').addEventListener('click', e => {
 $('#mesa-nuevo').addEventListener('click', () => {
   S.mesa = mesaVacia();
   S.mesa.nueva = true;
+  /* Una mesa nueva empieza con los nombres de siempre. Si no, se quedaban los
+     del juego común del que se venía y aparecían puestos en una mesa donde no
+     juega ninguno de ellos. */
+  S.names = [...DEFAULT_NAMES];
   buzz(8); save(); renderMesa();
 });
 $('#mesa-gchips').addEventListener('click', e => usarGrupo(e));
+$('#mesa-custom-btn').addEventListener('click', () => {
+  mesaCustom = !mesaCustom; buzz(8); refrescarMesa();
+});
 
 /* Cuántos son y si juegas: las dos cambian de quién es cada silla, así que las
    dos vacían la mesa por el mismo motivo. */
@@ -3344,7 +3422,10 @@ menu.addEventListener('click', e => {
 
 
 $('#scrim').addEventListener('click', closePad);
-$('#win-new').addEventListener('click', () => { buzz(12); newGame(); });
+$('#win-new').addEventListener('click', () => {
+  buzz(12); newGame();
+  ofrecerGrupo();   // se acaba de jugar con ellos, y ya no hay nada en pantalla
+});
 $('#win-close').addEventListener('click', () => { winSeen = true; render(); });
 
 /* ============================================================
@@ -3406,6 +3487,7 @@ document.addEventListener('visibilitychange', () => {
   // esperando, entra aquí. Si no había, se aprovecha para mirar si ya hay.
   if (autoApply()) return;
   swReg.update().catch(() => {});
+  ofrecerGrupo();
 });
 setInterval(checkIdle, 60 * 1000);   // también si la app queda abierta pero sin usar
 
@@ -3489,12 +3571,17 @@ function paintUpd() {
    cambio), lo que se protege aquí es no interrumpir.
 
    Devuelve true si la lanzó, para no encadenar otra comprobación encima. */
+/* Ni anotando puntos, ni con otro cartel delante, ni con una mano ganada en
+   pantalla. Lo usan la actualización y la sugerencia de juego común: las dos
+   interrumpen, y las dos pueden esperar al siguiente hueco. */
+const momentoTranquilo = () =>
+  !$('#sheet').classList.contains('on') &&
+  !$('#ask').classList.contains('on') &&
+  S.over < 0;
+
 function autoApply() {
   if (!swReg || !swReg.waiting) return false;
-  if ($('#sheet').classList.contains('on')) return false;  // anotando puntos
-  if ($('#ask').classList.contains('on'))   return false;  // decidiendo algo
-  if (S.over >= 0) return false;   // mano ganada a la vista: al recargar
-                                   // reaparecería la pantalla de ganador
+  if (!momentoTranquilo()) return false;
   if (preguntandoUpd) return true;                         // ya se está decidiendo
   decidirYAplicar();
   return true;
@@ -3733,6 +3820,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.ready
     .then(avisarActualizacion)
     .then(avisarReinstalar)
+    .then(ofrecerGrupo)
     .catch(() => {});
 }
 </script>
