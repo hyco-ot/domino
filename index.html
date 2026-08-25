@@ -82,6 +82,24 @@ button{border:0;background:none;cursor:pointer}
 .screen{display:none;flex:1;min-height:0;flex-direction:column}
 .screen.on{display:flex}
 
+/* Al elegir cómo se juega, la pantalla entra por el lado que se tocó: con
+   jugadores está a la izquierda y Blitz a la derecha, así que cada una viene de
+   su sitio y el gesto cuadra con dónde estaba el botón. Entrar a anotar baja,
+   que es "abrir" la mesa.
+
+   Se anima el contenido y no la pantalla entera: .screen es el contenedor que
+   hace de columna flexible, y transformarlo descoloca lo que lleva dentro. */
+@keyframes entraIzq  {from{opacity:0;transform:translateX(-14%)}}
+@keyframes entraDer  {from{opacity:0;transform:translateX(14%)}}
+@keyframes entraAbajo{from{opacity:0;transform:translateY(-9%)}}
+.anim-izq   > *{animation:entraIzq   .26s cubic-bezier(.2,.8,.2,1) both}
+.anim-der   > *{animation:entraDer   .26s cubic-bezier(.2,.8,.2,1) both}
+.anim-abajo > *{animation:entraAbajo .24s cubic-bezier(.2,.8,.2,1) both}
+/* a quien pida menos movimiento, ninguno */
+@media (prefers-reduced-motion: reduce) {
+  .anim-izq > *, .anim-der > *, .anim-abajo > *{animation:none}
+}
+
 /* ---------- barra superior ---------- */
 .top{display:flex;align-items:center;gap:6px;padding:10px 12px 4px;min-height:52px}
 .top .grow{flex:1}
@@ -189,10 +207,20 @@ button{border:0;background:none;cursor:pointer}
   display:grid;place-items:center}
 .tablero .cambia svg{width:13px;height:13px;fill:none;stroke:var(--dim);
   stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
-.mesa-cap{text-align:center;font-size:12.5px;color:var(--dim);margin-top:12px}
-.mesa-cap b{color:var(--txt);font-weight:700}
+/* Los tres modos escritos, el elegido en negrita. Antes solo se veía el actual
+   y había que tocar la ficha a ciegas para descubrir los otros. */
+.mesa-cap{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;margin-top:14px}
+.mesa-cap button{font-size:15px;font-weight:600;color:var(--dim);padding:4px 2px}
+.mesa-cap button.on{color:var(--txt);font-weight:800}
+.mesa-cap button:active{opacity:.6}
 
 .silla{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+/* la silla es un botón: se toca para llenarla o para vaciarla */
+.silla-btn{width:100%;min-width:0;text-align:center;padding:6px 2px;
+  border-bottom:1px dashed var(--line);font-size:14px;font-weight:500;color:var(--dim);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.silla-btn.lleno{font-weight:700;color:var(--txt);border-bottom-color:var(--as)}
+.silla-btn:active{opacity:.6}
 .silla input{width:100%;min-width:0;background:transparent;border:0;text-align:center;
   border-bottom:1px dashed var(--line);font-size:13.5px;font-weight:600;
   padding:5px 2px;color:var(--txt);outline:none}
@@ -393,13 +421,16 @@ button{border:0;background:none;cursor:pointer}
 .emid{display:flex;align-items:center;justify-content:center;gap:7px;min-width:0}
 .erow .ewhen{font-size:10px;color:var(--dim);font-variant-numeric:tabular-nums;
   opacity:.75;white-space:nowrap}
+/* por manos: la que se acaba de ganar, del color de su equipo. La siguiente que
+   entre, de quien sea, la devuelve al gris. */
+.erow.ahora .ewhen{color:var(--tc);opacity:1;font-weight:700;font-size:11px}
 .erow .pts{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--dim)}
 .erow.last .pts{color:var(--tc);font-weight:700;
   padding:2px 8px;border-radius:9px;border:1px dashed var(--line)}
 .erow.last .pts:active{background:var(--sunk)}
 .erow .marks{display:flex;align-items:center;gap:4px;color:var(--dim)}
 .erow .marks .pg{display:flex;align-items:center;gap:1px}
-.erow .marks .mark{width:14px;height:14px;flex:0 0 auto;
+.erow .marks .mark{width:14px;height:14px;flex:0 0 auto;fill:none;
   fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 .erow .marks .xn{font-size:10px;font-weight:700;font-style:normal}
 /* misma altura que la flecha para que la fila no crezca al poner capicúa */
@@ -673,8 +704,8 @@ button{border:0;background:none;cursor:pointer}
   letter-spacing:-.03em;color:var(--pt)}
 .entry.zero{opacity:.28}
 /* atajos del estilo "Chercha": pase corrido y capicúa */
-.chips{display:flex;gap:10px;justify-content:center;align-items:stretch;padding:2px 4px 13px}
-.chips button{flex:1;max-width:162px;display:flex;flex-direction:column;align-items:center;
+.chips{display:flex;gap:8px;justify-content:center;align-items:stretch;padding:2px 4px 13px}
+.chips button{flex:1;max-width:132px;min-width:0;display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:5px;padding:11px 10px;border-radius:18px;
   border:1px solid var(--line);transition:transform .08s ease}
 .chips button{position:relative}
@@ -697,7 +728,7 @@ button{border:0;background:none;cursor:pointer}
 .chips .chip-tile svg{display:block;height:34px;width:auto}
 .chips .chip-lbl{display:grid;place-items:center;min-height:2.3em;text-align:center;
   font-size:12.5px;font-weight:600;line-height:1.15;color:var(--dim)}
-.chips .chip-val{font-size:17px;font-weight:800;color:var(--txt);font-variant-numeric:tabular-nums}
+.chips .chip-val{font-size:16px;font-weight:800;color:var(--txt);font-variant-numeric:tabular-nums}
 .pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .pad button{height:56px;border-radius:15px;background:var(--bg);font-size:24px;font-weight:600;
   font-variant-numeric:tabular-nums;transition:transform .08s ease}
@@ -816,7 +847,15 @@ button{border:0;background:none;cursor:pointer}
   <!-- ============ pantalla 1: elegir modo ============ -->
   <section class="screen on" id="sc-mode">
     <div class="top">
+      <!-- solo en el segundo paso: en el primero no hay a dónde volver -->
+      <button class="icon-btn" id="volver-tipo2" aria-label="Volver" hidden>
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
       <div class="grow"></div>
+      <!-- solo con algo guardado: un historial vacío no es una pantalla -->
+      <button class="icon-btn" id="btn-hist" data-go="stats" aria-label="Historial" hidden>
+        <svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V4M16 20v-6M21 20H3"/></svg>
+      </button>
       <button class="icon-btn" data-go="config" aria-label="Ajustes">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1"/><path d="M19.1 14.6a1.5 1.5 0 0 0 .3 1.7l.1.1a1.9 1.9 0 1 1-2.7 2.7l-.1-.1a1.5 1.5 0 0 0-2.6 1.1v.2a1.9 1.9 0 1 1-3.8 0v-.1a1.5 1.5 0 0 0-2.6-1.2l-.1.1a1.9 1.9 0 1 1-2.7-2.7l.1-.1a1.5 1.5 0 0 0-1.1-2.6h-.2a1.9 1.9 0 1 1 0-3.8h.1a1.5 1.5 0 0 0 1.2-2.6l-.1-.1a1.9 1.9 0 1 1 2.7-2.7l.1.1a1.5 1.5 0 0 0 2.6-1.1v-.2a1.9 1.9 0 1 1 3.8 0v.1a1.5 1.5 0 0 0 2.6 1.2l.1-.1a1.9 1.9 0 1 1 2.7 2.7l-.1.1a1.5 1.5 0 0 0 1.1 2.6h.2a1.9 1.9 0 1 1 0 3.8h-.1a1.5 1.5 0 0 0-1.4.9z"/></svg>
       </button>
@@ -835,12 +874,7 @@ button{border:0;background:none;cursor:pointer}
             <span class="mode-name">Anotar con jugadores</span>
             <span class="mode-sub"></span>
           </button>
-          <button class="mode-card" data-tipo="manos">
-            <span class="tipo-ico"><svg viewBox="0 0 24 24"><path d="M5 5v14M9.5 5v14M14 5v14M18.5 5v14"/><path d="M3 18.5L20.5 5.5"/></svg></span>
-            <span class="mode-name">Jugar por manos</span>
-            <span class="mode-sub">Sin puntos, solo quién gana</span>
-          </button>
-          <button class="mode-card ancha" data-tipo="informal">
+          <button class="mode-card" data-tipo="informal">
             <span class="tipo-ico"><svg viewBox="0 0 24 24"><path d="M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12z"/></svg></span>
             <span class="mode-name">Blitz</span>
             <span class="mode-sub">Sin preguntar quién</span>
@@ -852,6 +886,11 @@ button{border:0;background:none;cursor:pointer}
       <div id="paso-modo" hidden>
         <p class="kicker">Elige el modo</p>
         <div class="modes">
+          <button class="mode-card ancha" data-mode="manos">
+            <span class="tile"></span>
+            <span class="mode-name">Por manos</span>
+            <span class="mode-sub"></span>
+          </button>
           <button class="mode-card" data-mode="dom">
             <span class="tile"></span>
             <span class="mode-name">Dominicano</span>
@@ -863,7 +902,6 @@ button{border:0;background:none;cursor:pointer}
             <span class="mode-sub"></span>
           </button>
         </div>
-        <button class="linky" id="volver-tipo">← Cambiar cómo van a jugar</button>
       </div>
 
       <p class="meta-note">Cada modo trae sus puntos. Se cambian en <b>Ajustes</b>.</p>
@@ -918,8 +956,6 @@ button{border:0;background:none;cursor:pointer}
             <button data-yojuego="1">Juego</button>
             <button data-yojuego="0">Solo anoto</button>
           </div>
-          <p class="cfg-hint">Al cambiar cualquiera de las dos, la mesa se vacía:
-            las sillas dejan de ser las mismas.</p>
         </div>
 
         <div class="mesa4" id="mesa4">
@@ -932,13 +968,7 @@ button{border:0;background:none;cursor:pointer}
           <div class="silla der"    data-silla="3"></div>
           <div class="silla abajo"  data-silla="0"></div>
         </div>
-        <p class="mesa-cap" id="mesa-cap"></p>
-        <div class="jchips" id="mesa-conocidos"></div>
-        <div class="jug-nuevo" id="mesa-alta" style="margin-top:14px">
-          <input id="mesa-alta-nombre" maxlength="18" spellcheck="false" autocomplete="off"
-                 placeholder="Buscar o añadir">
-          <button class="linky" id="mesa-alta-ok">Sentar</button>
-        </div>
+        <div class="mesa-cap" id="mesa-cap"></div>
 
         <!-- Plegado: armar la mesa es sentar gente, y los nombres y los colores
              casi siempre se quedan como están. -->
@@ -1141,8 +1171,6 @@ button{border:0;background:none;cursor:pointer}
           <input type="range" id="zoom" step="0.05" aria-label="Tamaño de la app">
           <span class="zoom-val" id="zoom-val">0.90×</span>
         </div>
-        <p class="cfg-hint">Agranda o achica toda la app a la vez. Útil si el teléfono
-          se queda en medio de la mesa y hay que leerlo de lejos.</p>
       </div>
 
       <div>
@@ -1157,7 +1185,6 @@ button{border:0;background:none;cursor:pointer}
             12 horas<i>9:05 p.m.</i>
           </button>
         </div>
-        <p class="cfg-hint">Vale para la hora de cada anotación y para la del historial.</p>
       </div>
 
       <div>
@@ -1168,11 +1195,18 @@ button{border:0;background:none;cursor:pointer}
         </div>
       </div>
 
+      <!-- Plegado: se entra a Ajustes por el tamaño o por las actualizaciones
+           mucho más a menudo que a quitar gente, y la lista puede ser larga. -->
       <div id="cfg-sec-jugadores">
-        <div class="cfg-lbl">Jugadores y grupos</div>
-        <div id="cfg-jugadores"></div>
-        <p class="cfg-hint">Quitar a alguien no borra las manos que ya jugó: se quedan
-          guardadas con su nombre. Los juegos comunes salen como atajo al empezar.</p>
+        <button class="acord" id="cfg-jug-btn" aria-expanded="false">
+          <span>Jugadores y grupos</span>
+          <svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div id="cfg-jug-panel" hidden>
+          <div id="cfg-jugadores"></div>
+          <p class="cfg-hint">Quitar a alguien no borra las manos que ya jugó: se quedan
+            guardadas con su nombre.</p>
+        </div>
       </div>
 
       <!-- lo que se pierde sin nombre; se explica una vez, no en cada sección -->
@@ -1311,6 +1345,24 @@ button{border:0;background:none;cursor:pointer}
   </div>
 </div>
 
+<!-- sentar a alguien en una silla: los conocidos arriba, el campo abajo -->
+<div class="ask" id="sentar">
+  <div class="ask-card">
+    <h3 id="sentar-titulo"></h3>
+    <div class="jchips" id="sentar-lista"></div>
+    <p class="cfg-hint" id="sentar-vacio" hidden>Nadie con ese nombre todavía.
+      Escríbelo entero y toca Sentar para darlo de alta.</p>
+    <div class="jug-nuevo" style="margin-top:14px">
+      <input id="sentar-nombre" maxlength="18" spellcheck="false" autocomplete="off"
+             placeholder="Buscar o añadir">
+      <button class="linky" id="sentar-ok">Sentar</button>
+    </div>
+    <div class="ask-btns" style="margin-top:16px">
+      <button class="no" id="sentar-cerrar">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- una mano del historial, a detalle -->
 <div class="ask" id="mano">
   <div class="ask-card">
@@ -1357,8 +1409,16 @@ const IDLE_MS  = 1 * 60 * 60 * 1000;   // 1 h sin usar la app -> sesión nueva
 const KEY      = 'domino.v2';
 // cada modo trae su meta de puntos: se aplica al elegirlo, y de ahí en adelante
 // manda lo que diga Ajustes.
-const MODES    = { dom:{ label:'Dominicano', pips:6, target:200 },
-                   cub:{ label:'Cubano',     pips:9, target:300 } };
+/* Por manos no tiene fichas ni tope de puntos: el tope son las manos de la
+   tanda, que se elige aparte. pips 0 es lo que lo distingue al pintar. */
+const MODES    = { manos:{ label:'Por manos',  pips:0, target:0 },
+                   dom:  { label:'Dominicano', pips:6, target:200 },
+                   cub:  { label:'Cubano',     pips:9, target:300 } };
+// las rayas de la pizarra: el dibujo de por manos, donde iría la ficha
+const MARCA_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+  'stroke-width="1.7" stroke-linecap="round">' +
+  '<path d="M5 5v14M9.5 5v14M14 5v14M18.5 5v14"/><path d="M3 18.5L20.5 5.5"/></svg>';
+const modoSVG = k => k === 'manos' ? MARCA_ICO : tileSVG(MODES[k].pips, MODES[k].pips);
 const CHIP_PTS = 30;                   // pase corrido y doble, solo en el estilo "Chercha"
 const DEFAULT_NAMES = ['Nosotros', 'Ellos'];
 
@@ -1477,7 +1537,7 @@ const blank = () => ({
   colores:   [],     // color de cada tanda: [{ ident, accents }], la más reciente primero
   mejorDe: 5,        // Por manos: de cuántas es la tanda (impares del 3 al 15)
   avisoCache: 1,     // ¿ya se le avisó de reinstalar? 1 en una instalación nueva
-  esquema:   4       // versión del estado guardado; la usa load() para migrar
+  esquema:   5       // versión del estado guardado; la usa load() para migrar
 });
 
 let S = load();
@@ -1506,7 +1566,10 @@ function load() {
        medias por lo de addAll: se le ofrece reinstalar una vez. En una
        instalación nueva no hay nada que avisar, y por eso blank() dice 1. */
     if (antes < 4) s.avisoCache = 0;
-    s.esquema = 4;
+    /* Por manos era una forma de jugar y ahora es un modo. A quien lo tuviera
+       puesto se le traduce: jugaba con jugadores, anotando por manos. */
+    if (antes < 5 && s.tipo === 'manos') { s.tipo = 'formal'; s.mode = 'manos'; }
+    s.esquema = 5;
     return s;
   } catch { return blank(); }
 }
@@ -1545,6 +1608,18 @@ const porNombre = (a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity
    estado de un campo de texto. */
 let jugFiltro = '', mesaFiltro = '', jugExtra = false;
 let mesaCustom = false;      // ni este: el acordeón de la mesa
+let sillaAbierta = -1;       // qué silla se está llenando, o -1
+let cfgJugAbierto = false;   // el acordeón de jugadores en Ajustes
+
+/* Una animación de entrada, una vez. No persiste ni se guarda en el estado: se
+   pone, se deja correr y se quita, para que el siguiente repintado no la repita. */
+function animar(sel, clase) {
+  const el = $(sel); if (!el) return;
+  el.classList.remove('anim-izq', 'anim-der', 'anim-abajo');
+  void el.offsetWidth;                 // reinicia la animación si ya estaba puesta
+  el.classList.add(clase);
+  setTimeout(() => el.classList.remove(clase), 400);
+}
 const pelado = t => (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const casaNombre = (nombre, filtro) => !filtro || pelado(nombre).includes(pelado(filtro));
 
@@ -1896,7 +1971,8 @@ function render() {
   }
 
   const inGame = !!S.mode;
-  if (!inGame && view === 'stats') view = 'game';     // sin partida no hay historial
+  // el historial se mira con partida o sin ella; lo que hace falta es tener manos
+  if (view === 'stats' && !inGame && !S.history.length) view = 'game';
   if (inGame && view === 'mesa')   view = 'game';     // no se rearma a media partida
   // los jugadores de la mesa solo existen en Formal, y solo con partida abierta
   if (view === 'jugadores' && !(inGame && conMesa() && S.mesa)) view = 'game';
@@ -1906,17 +1982,23 @@ function render() {
     jugFiltro = ''; $('#jug-nombre').value = '';
     jugExtra = false;                      // vuelve plegado, como se encontro
   }
-  if (view !== 'mesa') { mesaFiltro = ''; $('#mesa-alta-nombre').value = ''; mesaCustom = false; }
+  if (view !== 'mesa') {
+    mesaFiltro = ''; mesaCustom = false;
+    if (sillaAbierta >= 0) cerrarSilla();
+  }
   if (view !== 'stats' && manoAbierta >= 0) cerrarMano();
   $('#sc-mode').classList.toggle('on',   !inGame && view === 'game');
   $('#sc-mesa').classList.toggle('on',   !inGame && view === 'mesa');
   $('#sc-game').classList.toggle('on',    inGame && view === 'game');
   $('#sc-config').classList.toggle('on',  view === 'config');
-  $('#sc-stats').classList.toggle('on',   inGame && view === 'stats');
+  $('#sc-stats').classList.toggle('on',   view === 'stats');
   $('#sc-jug').classList.toggle('on',     inGame && view === 'jugadores');
 
   // salir de Ajustes vuelve a plegar la zona de peligro y suelta lo marcado
-  if (view !== 'config' && borrarAbierto) { borrarAbierto = false; borrarSel.clear(); }
+  if (view !== 'config') {
+    if (borrarAbierto) { borrarAbierto = false; borrarSel.clear(); }
+    cfgJugAbierto = false;
+  }
 
   if (view === 'mesa')   { $('#win').classList.remove('on'); renderMesa(); return; }
   if (view === 'jugadores') { $('#win').classList.remove('on'); renderJug(); return; }
@@ -1924,8 +2006,7 @@ function render() {
   if (view !== 'game')   { $('#win').classList.remove('on'); renderStats(); return; }
   if (!inGame)           { $('#win').classList.remove('on'); renderLanzador(); return; }
 
-  const pips = MODES[S.mode].pips;
-  $('#badge-tile').innerHTML = tileSVG(pips, pips);
+  $('#badge-tile').innerHTML = modoSVG(S.mode);
   // el nombre del modo se va de la vista, pero sigue ahí para lectores de pantalla
   $('#badge').setAttribute('aria-label', `Tranque, modo ${MODES[S.mode].label}`);
   $('#ord').textContent = porManos()
@@ -1938,9 +2019,10 @@ function render() {
   $('#mi-mode').classList.toggle('off', !puedeModo);
   $('#mi-mode i').textContent = puedeModo ? '' : 'Solo con el marcador en 0—0';
   $('#chips').innerHTML = chipsHTML();
-  /* El botón se queda a la vista siempre, apagado cuando no se puede usar: al
-     tocarlo dice por qué. Escondido no se entendía nada — y encima no llegaba a
-     esconderse, porque .icon-btn trae su propio display y le gana a [hidden]. */
+  /* En Blitz no hay jugadores que cambiar, así que el botón sobra del todo: uno
+     apagado que solo sabe decir que no es peor que ninguno. Con jugadores se
+     queda, y se apaga solo si falta la mesa. */
+  $('#btn-jug').hidden = !conMesa();
   $('#btn-jug').classList.toggle('off', !(conMesa() && S.mesa));
 
   const [s0, s1] = S.scores;
@@ -2000,7 +2082,7 @@ function render() {
   $('#win').classList.toggle('on', showWin);
   if (showWin) {
     const w = S.over;
-    $('#win-tile').innerHTML = tileSVG(pips, pips);
+    $('#win-tile').innerHTML = modoSVG(S.mode);
     $('#win-cap').textContent = porManos()
       ? cuantaTxt(mejorDe())
       : `${ordinal(gameNo())} mano`;
@@ -2017,9 +2099,15 @@ const PASE_PATH = `<path d="M20.5 12a8.5 8.5 0 1 1-2.5-6"/><path d="M20.8 3.6v5h
 const PASE_ICO  = `<svg class="chip-ico" viewBox="0 0 24 24">${PASE_PATH}</svg>`;
 const PASE_MARK = `<svg class="mark" viewBox="0 0 24 24">${PASE_PATH}</svg>`;
 
+// tranque: un candado, que es lo que pasa — la mano se cierra y no se puede jugar
+const TRAN_PATH = '<rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/>' +
+                  '<path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>';
+const TRAN_ICO  = `<svg class="chip-ico" viewBox="0 0 24 24">${TRAN_PATH}</svg>`;
+const TRAN_MARK = `<svg class="mark" viewBox="0 0 24 24">${TRAN_PATH}</svg>`;
+
 // los dos atajos del teclado: el doble cambia según el modo (6 dominicano / 9 cubano)
 function chipsHTML() {
-  const pips = MODES[S.mode].pips;
+  const pips = MODES[S.mode].pips || 6;
   return `
     <button data-chip="pase" aria-label="Pase corrido, ${CHIP_PTS} puntos">
       <i class="chip-n"></i>
@@ -2031,14 +2119,23 @@ function chipsHTML() {
       <span class="chip-top"><span class="chip-tile">${tileSVG(pips, pips)}</span></span>
       <span class="chip-lbl">Capicúa</span>
       <span class="chip-val">+${CHIP_PTS}</span>
+    </button>
+    <button data-chip="tranque" aria-label="Tranque, no suma puntos">
+      <span class="chip-top">${TRAN_ICO}</span>
+      <span class="chip-lbl">Tranque</span>
+      <span class="chip-val">—</span>
     </button>`;
 }
 
 /* Por manos cada anotación vale 1, así que la cifra no dice nada: queda la hora
    en que se ganó, que es lo único que aporta. Quitar va en el botón de al lado. */
 function manosHTML(team) {
+  // la última de la MESA, no la última de este equipo: así solo hay una en
+  // color a la vez y se ve de un vistazo quién acaba de ganar
+  const ultima = S.rounds.length - 1;
   return S.rounds.map((r, i) => ({ ...r, i })).filter(e => e.t === team).reverse()
-    .map(e => `<div class="erow"><span class="ewhen">${e.ts ? soloHora(e.ts) : ''}</span></div>`)
+    .map(e => `<div class="erow${e.i === ultima ? ' ahora' : ''}">` +
+              `<span class="ewhen">${e.ts ? soloHora(e.ts) : ''}</span></div>`)
     .join('');
 }
 
@@ -2048,7 +2145,7 @@ function entriesHTML(team) {
   const mine = [];
   S.rounds.forEach((r, i) => { if (r.t === team) mine.push({ ...r, i }); });
   if (!mine.length) return '';
-  const pips = MODES[S.mode].pips;
+  const pips = MODES[S.mode].pips || 6;
   const newest = mine.length - 1;
 
   return mine.map((e, n) => {
@@ -2056,6 +2153,7 @@ function entriesHTML(team) {
     if (pn === 1)     marks.push(PASE_MARK);
     else if (pn > 1)  marks.push(`<span class="pg">${PASE_MARK}<i class="xn">${pn}</i></span>`);
     if (e.capi)       marks.push(`<span class="tmark">${tileSVG(pips, pips)}</span>`);
+    if (e.tranque)    marks.push(TRAN_MARK);
     // solo la última se puede tocar: es la única que lleva X y la única que se
     // corrige sin tener que deshacer lo de después
     const cifra = n === newest
@@ -2106,10 +2204,11 @@ function rehacerMesa(m) {
 
 // Formal necesita nombre: allí quien anota es un jugador más de la mesa.
 const puedeFormal = () => !!(S.anotador || '').trim();
-// Formal y Por manos comparten mesa, jugadores, colores e identidad; lo unico
-// que cambia entre ellos es si se anotan puntos o solo quien gana.
-const conMesa = () => S.tipo === 'formal' || S.tipo === 'manos';
-const porManos = () => S.tipo === 'manos';
+// con jugadores: mesa, catálogo, colores propios e identidad de cuarteto
+const conMesa = () => S.tipo === 'formal';
+// y por manos es cómo se anota, no con quién: vale para las dos formas de jugar
+const porManos = () => S.mode === 'manos';
+const mesaPorManos = m => !!m && m.modo === 'manos';
 /* Mejor de 5 son tres manos: la mitad más una. Siempre impar, para que no pueda
    quedar en tablas. */
 // impares, para que una tanda no pueda quedar en tablas
@@ -2163,7 +2262,7 @@ function pasoMejor(paso) {
   S.mejorDe = v;
   buzz(6);
   if (view === 'mesa') {
-    if (porManos()) S.target = paraGanar();
+    if (mesaPorManos(S.mesa)) S.target = paraGanar();
     save(); refrescarMesa();
   } else {
     setTarget(paraGanar());
@@ -2176,15 +2275,13 @@ function renderLanzador() {
   const paso2 = !!S.tipo;
   $('#paso-tipo').hidden = paso2;
   $('#paso-modo').hidden = !paso2;
+  $('#volver-tipo2').hidden = !paso2;
   if (paso2) return;
 
+  $('#btn-hist').hidden = !S.history.length;
   const bf = $('[data-tipo="formal"]');
   bf.classList.toggle('off', !puedeFormal());
   $('.mode-sub', bf).textContent = puedeFormal() ? '' : 'Pon tu nombre en Ajustes';
-  const bm = $('[data-tipo="manos"]');
-  bm.classList.toggle('off', !puedeFormal());
-  $('.mode-sub', bm).textContent = puedeFormal()
-    ? 'Sin puntos, solo quién gana' : 'Pon tu nombre en Ajustes';
   renderGrupoChips();
 }
 
@@ -2232,7 +2329,7 @@ function renderMesa() {
   $('#mesa-armar').hidden = !armando;
   // de cuántas manos solo tiene sentido jugando por manos. Va aquí y no en
   // refrescarMesa: esa no llega a correr cuando se ofrecen juegos guardados.
-  $('#mesa-mejor').hidden = !porManos();
+  $('#mesa-mejor').hidden = !mesaPorManos(S.mesa);
   if (!armando) {
     $('#mesa-gchips').innerHTML = guardados.map(chipGrupoHTML).join('');
     return;
@@ -2240,9 +2337,10 @@ function renderMesa() {
 
   // el tablero del centro lleva la ficha del modo que se va a jugar, y tocarla
   // lo cambia; el pie de la mesa dice cuál es y a cuántos puntos
-  const modo = m.modo || 'dom', M = MODES[modo];
-  $('#mesa-ficha-svg').innerHTML = tileSVG(M.pips, M.pips);
-  $('#mesa-cap').innerHTML = `<b>${M.label}</b> · ${M.target} pts · toca la ficha para cambiar`;
+  const modo = m.modo || 'dom';
+  $('#mesa-ficha-svg').innerHTML = modoSVG(modo);
+  $('#mesa-cap').innerHTML = Object.keys(MODES).map(k =>
+    `<button data-mesamodo="${k}"${k === modo ? ' class="on"' : ''}>${MODES[k].label}</button>`).join('');
 
   $('#mesa4').classList.toggle('de2', mesaCuantos(m) === 2);
   const foco = document.activeElement;
@@ -2251,23 +2349,55 @@ function renderMesa() {
     el.style.setProperty('--as', colorDe(S.accents[t]));
     // no se repinta la silla que se está tecleando, o se pierde lo escrito
     if (el.contains(foco) && foco.tagName === 'INPUT') return;
+    /* La silla entera es un botón: tocarla abre el menú de sentar, y si ya hay
+       alguien lo levanta y vuelve a abrirlo. Antes cada silla era un campo de
+       texto y había que teclear el nombre entero cada vez. */
     if (i === 0 && yoJuego(m) && puedeFormal()) {
       el.classList.add('yo');
       el.innerHTML = `<span class="pt"></span>
         <span class="nom">${escapa(S.anotador)}</span><span class="tu">tú</span>`;
     } else {
       el.classList.remove('yo');
-      // sin ti en la mesa no hay "tu compañero": son cuatro jugadores y ya
+      const quien = nombreDeId(m.ids[i]);
       const hueco = !yoJuego(m) ? 'Jugador' : (i === 2 ? 'Tu compañero' : 'Contrario');
       el.innerHTML = `<span class="pt"></span>
-        <input data-silla-in="${i}" maxlength="18" spellcheck="false" autocomplete="off"
-               placeholder="${hueco}"
-               value="${escapa(nombreDeId(m.ids[i]))}">`;
+        <button class="silla-btn${quien ? ' lleno' : ''}" data-silla="${i}">${escapa(quien || hueco)}</button>`;
     }
   });
 
   renderAccents('#mesa-accents');
   refrescarMesa();
+}
+
+/* El menú de sentar: los conocidos arriba y el campo abajo, que busca entre
+   ellos mientras se escribe y da de alta si no aparece nadie. Se abre tocando
+   una silla, y se cierra solo en cuanto alguien se sienta. */
+function abrirSilla(i) {
+  const m = S.mesa; if (!m) return;
+  sillaAbierta = i;
+  mesaFiltro = '';
+  $('#sentar-nombre').value = '';
+  pintarSentar();
+  $('#sentar').classList.add('on');
+}
+
+function cerrarSilla() {
+  sillaAbierta = -1;
+  $('#sentar').classList.remove('on');
+}
+
+function pintarSentar() {
+  const m = S.mesa; if (!m || sillaAbierta < 0) return;
+  const t = sillaAbierta % 2;
+  $('#sentar-titulo').textContent = sillaAbierta === 0 && yoJuego(m)
+    ? 'Tu silla' : `Quién se sienta · ${teamName(t)}`;
+  const puestos = m.ids.filter(Boolean);
+  const libres = jugadoresVivos()
+    .filter(j => !puestos.includes(j.id) && casaNombre(j.nombre, mesaFiltro))
+    .sort(porNombre);
+  $('#sentar-lista').innerHTML = libres
+    .map(j => `<button data-sentar-en="${j.id}">${escapa(j.nombre)}</button>`).join('');
+  $('#sentar-vacio').hidden = !!libres.length;
 }
 
 /* Lo que cambia al sentar a alguien, SIN volver a construir las sillas.
@@ -2278,10 +2408,6 @@ function refrescarMesa() {
   const m = S.mesa; if (!m) return;
   const puestos = m.ids.filter(Boolean);
 
-  $('#mesa-conocidos').innerHTML = jugadoresVivos()
-    .filter(j => !puestos.includes(j.id) && casaNombre(j.nombre, mesaFiltro))
-    .sort(porNombre)
-    .map(j => `<button data-poner="${j.id}">${escapa(j.nombre)}</button>`).join('');
   pintarMejor('#mesa-mejor-val', '#mesa-mejor-menos', '#mesa-mejor-mas');
   $$('[data-cuantos]').forEach(b =>
     b.setAttribute('aria-checked', +b.dataset.cuantos === mesaCuantos(m)));
@@ -2290,7 +2416,6 @@ function refrescarMesa() {
   // hace falta al menos uno por equipo: dos compañeros no son una partida
   $('#mesa-ok').disabled = !mesaVale(m);
   // llena la mesa, el campo sigue sirviendo para apuntar a alguien de más
-  $('#mesa-alta-ok').textContent = puestos.length >= 4 ? 'Guardar' : 'Sentar';
   $('#mesa-custom-btn').setAttribute('aria-expanded', mesaCustom);
   $('#mesa-custom').hidden = !mesaCustom;
 
@@ -2526,6 +2651,8 @@ function renderConfig() {
      lo pone el modo al elegirlo, así que ahí no habría qué ajustar. */
   const conNombre = puedeFormal();
   $('#cfg-sec-jugadores').hidden = !conNombre;
+  $('#cfg-jug-btn').setAttribute('aria-expanded', cfgJugAbierto);
+  $('#cfg-jug-panel').hidden = !cfgJugAbierto;
   $('#cfg-sin-nombre').hidden    = conNombre;
   // por manos el tope no son puntos: se elige con "¿Hasta la cuánta?"
   $('#cfg-sec-puntos').hidden    = !S.mode || porManos();
@@ -2596,11 +2723,11 @@ const jugadoresHTML = (r, t) => {
 
    Va en detalle y en pastillas, no en lista: esa fila es una sola línea y ya
    lleva ficha, marcador, ganador y hora. */
-const TIPO_TXT = { formal: 'Con jugadores', informal: 'Blitz', manos: 'Por manos' };
-/* Por manos comparte identidad con Formal —los dos son el cuarteto—, asi que no
-   se distingue por el ident: lo dice el propio registro. */
-const tipoMano = r => r.manos ? 'manos'
-  : !r.ident ? '' : (r.ident.startsWith('f:') ? 'formal' : 'informal');
+/* Con quién se jugó. Cómo se anotó lo dice la ficha del modo, que ya va al lado:
+   son dos cosas distintas y una mano puede ser las dos —con jugadores y por
+   manos a la vez—, que es justo lo que antes no se podía. */
+const TIPO_TXT = { formal: 'Con jugadores', informal: 'Blitz' };
+const tipoMano = r => !r.ident ? '' : (r.ident.startsWith('f:') ? 'formal' : 'informal');
 const cuandoHTML = r => {
   const t = TIPO_TXT[tipoMano(r)] || '';
   return `<span class="hcuando"><span class="hwhen">${fmtWhen(r.ts)}</span>` +
@@ -2612,8 +2739,9 @@ const marcador = r =>
   `<span class="hpts"><b style="color:${colorMano(r, 0)}">${r.scores[0]}</b><span class="d">—</span><b style="color:${colorMano(r, 1)}">${r.scores[1]}</b></span>`;
 
 function manoHTML(r, vista, idx) {
-  const m = MODES[r.mode];
-  const ficha = m ? `<span class="hficha">${tileSVG(m.pips, m.pips)}</span>` : '';
+  // las manos guardadas antes de esto llevan mode 'dom'/'cub' con manos:1
+  const claveModo = r.manos ? 'manos' : r.mode;
+  const ficha = MODES[claveModo] ? `<span class="hficha">${modoSVG(claveModo)}</span>` : '';
   const n0 = teamName(0, r.names), n1 = teamName(1, r.names);
 
   if (vista === 'lista') {
@@ -2712,8 +2840,8 @@ function rehacerMano(i) {
   if (!r || !puedeRehacer(r)) return;
   cerrarMano();
 
-  S.tipo = r.manos ? 'manos' : (r.mesa ? 'formal' : 'informal');
-  S.mode = r.mode || 'dom';
+  S.tipo = r.mesa ? 'formal' : 'informal';
+  S.mode = r.manos ? 'manos' : (r.mode || 'dom');
   if (r.mesa) {
     S.mesa = { ...mesaVacia(), ids: [...r.mesa], armando: false,
                modo: S.mode, grupo: r.grupo || null,
@@ -2755,8 +2883,7 @@ function renderStats() {
      dicen aparte para que las cuentas cuadren a la vista. */
   const formales   = h.filter(r => tipoMano(r) === 'formal').length;
   const informales = h.filter(r => tipoMano(r) === 'informal').length;
-  const pormanos   = h.filter(r => tipoMano(r) === 'manos').length;
-  const sinMarcar  = h.length - formales - informales - pormanos;
+  const sinMarcar  = h.length - formales - informales;
   const yo = anotadorJugador();
 
   // el indice del registro viaja con la fila: la lista va del reves
@@ -2782,7 +2909,6 @@ function renderStats() {
       <div class="stat-card">
         ${row('Manos guardadas', h.length)}
         ${row(TIPO_TXT.formal, formales)}
-        ${pormanos ? row(TIPO_TXT.manos, pormanos) : ''}
         ${row(TIPO_TXT.informal, informales)}
         ${sinMarcar ? row('Sin marcar', sinMarcar) : ''}
         ${yo ? row('Ganadas por ti', yo.ganadas || 0) : ''}
@@ -2852,11 +2978,12 @@ function recount() {
   }
 }
 
-function addRound(team, pts, pase = 0, capi = false) {
+function addRound(team, pts, pase = 0, capi = false, tran = false) {
   if (S.over >= 0 || !(pts > 0)) return;
   const r = { t: team, p: pts, ts: Date.now() };
   if (pase) r.pase = pase;      // cuántos pases corridos entraron en estos puntos
   if (capi) r.capi = 1;         // si hubo capicúa (solo puede haber una)
+  if (tran) r.tranque = 1;      // la mano se trancó; no suma, pero queda dicho
   S.rounds.push(r);
   recount();
   save(); render();                      // pintar antes: la reacción usa --wc ya puesto
@@ -2871,12 +2998,13 @@ function addRound(team, pts, pase = 0, capi = false) {
 /* Corregir una anotación ya hecha. A diferencia de addRound, esta SÍ funciona
    con la mano ganada: si la que la ganó llevaba un número mal puesto, corregirla
    es justo lo que hace falta, y recount() reabre la mano solo si toca. */
-function editRound(i, pts, pase = 0, capi = false) {
+function editRound(i, pts, pase = 0, capi = false, tran = false) {
   const r = S.rounds[i];
   if (!r || !(pts > 0)) return;
   r.p = pts;
   if (pase) r.pase = pase; else delete r.pase;
   if (capi) r.capi = 1;   else delete r.capi;
+  if (tran) r.tranque = 1; else delete r.tranque;
   recount();
   save(); render();
 }
@@ -2915,6 +3043,8 @@ let padTeam = 0, padOps = [], padEdit = -1;
 const padDigits = () => padOps.filter(o => o.k === 'd').map(o => o.v).join('');
 const padPase   = () => padOps.filter(o => o.k === 'pase').length;
 const padCapi   = () => padOps.some(o => o.k === 'capi');
+// el tranque no entra en padTotal: marca la mano, no la suma
+const padTran   = () => padOps.some(o => o.k === 'tranque');
 const padBase   = () => +padDigits() || 0;
 const padBonus  = () => padPase() + (padCapi() ? 1 : 0);
 const padTotal  = () => padBase() + padBonus() * CHIP_PTS;
@@ -2935,7 +3065,9 @@ function openPad(team, edit = -1) {
     const base = r.p - ((r.pase || 0) + (r.capi ? 1 : 0)) * CHIP_PTS;
     if (base > 0) for (const v of String(base)) padOps.push({ k: 'd', v });
     for (let i = 0; i < (r.pase || 0); i++) padOps.push({ k: 'pase' });
+    // la capicúa manda si por lo que sea vinieran las dos: es la que suma
     if (r.capi) padOps.push({ k: 'capi' });
+    else if (r.tranque) padOps.push({ k: 'tranque' });
   }
   $('#sheet').style.setProperty('--pt', team === 0 ? 'var(--a)' : 'var(--b)');
   // el nombre ya no se pinta: lo dice la flecha, y queda para quien use lector
@@ -2961,10 +3093,12 @@ function paintPad() {
   // apagado va solo el pase corrido; la capicúa nunca se queda sin sitio
   const pn = padPase(), sinSitio = paseLleno();
   $$('#chips button').forEach(b => {
-    const isCapi = b.dataset.chip === 'capi';
-    b.classList.toggle('dead', !isCapi && sinSitio);
-    b.classList.toggle('on', isCapi ? padCapi() : pn > 0);
-    if (!isCapi) {
+    const k = b.dataset.chip;
+    // el tope es solo del pase corrido; capicúa y tranque entran siempre
+    b.classList.toggle('dead', k === 'pase' && sinSitio);
+    b.classList.toggle('on', k === 'capi' ? padCapi()
+                          : k === 'tranque' ? padTran() : pn > 0);
+    if (k === 'pase') {
       $('.chip-n', b).textContent   = pn || '';
       $('.chip-val', b).textContent = '+' + (pn || 1) * CHIP_PTS;
     }
@@ -2974,12 +3108,12 @@ function padKey(k) {
   buzz(6);
   if (k === 'del') padOps.pop();
   else if (k === 'ok') {
-    const n = padTotal(), pase = padPase(), capi = padCapi(), edit = padEdit;
+    const n = padTotal(), pase = padPase(), capi = padCapi(), tran = padTran(), edit = padEdit;
     closePad();
     if (edit >= 0) {
       // corregir a 0 es la forma natural de decir "esta anotación no existió"
-      if (n > 0) editRound(edit, n, pase, capi); else removeEntry(edit);
-    } else if (n > 0) addRound(padTeam, n, pase, capi);
+      if (n > 0) editRound(edit, n, pase, capi, tran); else removeEntry(edit);
+    } else if (n > 0) addRound(padTeam, n, pase, capi, tran);
     return;
   }
   // Teclear ya no toca los atajos marcados: su tope no depende de las fichas.
@@ -2990,16 +3124,30 @@ function padKey(k) {
 // un atajo, lo pulse el dedo o el teclado
 function chipTap(kind) {
   if (S.style !== 'chercha') return;      // en "Clásico" no hay atajos
-  // La capicúa entra siempre, se ponga o se quite: no tiene tope ninguno.
+  // La capicúa y el tranque entran siempre: el tope es solo del pase corrido.
   if (kind === 'pase' && paseLleno()) {   // ya no cabe otro: se avisa y no suma
     buzz([16, 55, 16]);
     bigReact(pick(REACTIONS.dead), padTeam);
     return;
   }
+  /* Se marca igual: es un aviso, no una negativa — hay quien marca primero y
+     teclea después. Pero trancar no es anotar, y una mano trancada sin puntos
+     es lo más fácil de dejar a medias. */
+  if (kind === 'tranque' && !padTran() && !padBase())
+    bigReact('¡Pero pon los puntos!', padTeam);
   buzz(6);
-  if (kind === 'capi') {
-    const i = padOps.findIndex(o => o.k === 'capi');
-    if (i >= 0) padOps.splice(i, 1); else padOps.push({ k: 'capi' });   // conmuta
+  if (kind === 'capi' || kind === 'tranque') {
+    const i = padOps.findIndex(o => o.k === kind);
+    if (i >= 0) padOps.splice(i, 1);
+    else {
+      /* No pueden ir juntas: si alguien cerró con capicúa, la mano no se trancó;
+         y si se trancó, nadie llegó a cerrar. Marcar una suelta la otra en vez
+         de no dejar, que obligaría a acordarse de destildar primero. */
+      const otra = kind === 'capi' ? 'tranque' : 'capi';
+      const j = padOps.findIndex(o => o.k === otra);
+      if (j >= 0) padOps.splice(j, 1);
+      padOps.push({ k: kind });
+    }
   } else {
     padOps.push({ k: 'pase' });                                          // sí acumula
   }
@@ -3121,6 +3269,9 @@ function elegirAcento(yo, k) {
   }));
 
 // nombre del que anota: en vivo sin render(), para no perder el foco
+$('#cfg-jug-btn').addEventListener('click', () => {
+  cfgJugAbierto = !cfgJugAbierto; buzz(8); renderConfig();
+});
 $('#cfg-anotador').addEventListener('input', e => { S.anotador = e.target.value; });
 $('#cfg-anotador').addEventListener('change', e => {
   // vacío no vuelve a null: null es "nunca se registró" y reabriría la puerta
@@ -3154,9 +3305,10 @@ $('#cfg-jugadores').addEventListener('click', async e => {
 
 $$('[data-mode]').forEach(card => card.addEventListener('click', () => {
   S.mode   = card.dataset.mode;
-  S.target = MODES[S.mode].target;   // el modo manda la meta al empezar
+  S.target = topeDeJuego();          // el modo manda la meta: puntos o manos
   recount();
   buzz(12); save(); render();
+  animar('#sc-game', 'anim-abajo');  // se abre la mesa: entra desde arriba
 }));
 
 /* ============================================================
@@ -3183,14 +3335,17 @@ $('#reg-saltar').addEventListener('click', () => {
 // Informal arranca como siempre; Formal se va a armar la mesa.
 $$('[data-tipo]').forEach(b => b.addEventListener('click', () => {
   const tipo = b.dataset.tipo;
-  if (tipo !== 'informal' && !puedeFormal()) {
+  if (tipo === 'formal' && !puedeFormal()) {
     buzz([16, 55, 16]);
     toast('Para jugar con jugadores, pon tu nombre en Ajustes');
     return;
   }
   S.tipo = tipo;
   buzz(10);
-  if (tipo !== 'informal') {
+  // con jugadores está a la izquierda y Blitz a la derecha: cada uno entra por su lado
+  animar('#sc-mode .mode-wrap', tipo === 'formal' ? 'anim-izq' : 'anim-der');
+  animar('#sc-mesa .sheetish', 'anim-izq');
+  if (tipo === 'formal') {
     if (!S.mesa || !S.mesa.armando) S.mesa = mesaVacia();
     view = 'mesa';
   } else {
@@ -3208,29 +3363,23 @@ $$('[data-tipo]').forEach(b => b.addEventListener('click', () => {
   }
   save(); render();
 }));
-$('#volver-tipo').addEventListener('click', () => { buzz(8); S.tipo = null; save(); render(); });
+function volverATipo() {
+  buzz(8); S.tipo = null; save(); render();
+  animar('#sc-mode .mode-wrap', 'anim-der');   // se vuelve por donde se vino
+}
+$('#volver-tipo2').addEventListener('click', volverATipo);
 $('#mesa-atras').addEventListener('click', () => {
   buzz(8); S.tipo = null; view = 'game'; save(); render();
 });
 
-/* Escribir en una silla: el jugador se da de alta al soltar el campo, no en
-   cada tecla, o el catálogo se llenaría de "P", "Pa", "Pap"… */
-$('#mesa4').addEventListener('change', e => {
-  const el = e.target.closest('[data-silla-in]'); if (!el) return;
-  const id = altaJugador(el.value);
-  S.mesa.ids[+el.dataset.sillaIn] = id;
-  el.value = nombreDeId(id);        // deja el nombre como quedó en el catálogo
-  save(); refrescarMesa();          // sin tocar las otras sillas
-});
-/* Tocar un conocido lo sienta en la primera silla libre, y el recorrido va
-   contra el reloj —derecha, enfrente, izquierda— que es el sentido en que se
-   juega. La silla de abajo no entra: es la de quien anota. */
-$('#mesa-conocidos').addEventListener('click', e => {
-  const b = e.target.closest('[data-poner]'); if (!b) return;
-  const libre = sillasLibres(S.mesa).find(i => !S.mesa.ids[i]);
-  if (libre === undefined) { toast('La mesa ya está llena'); return; }
-  S.mesa.ids[libre] = b.dataset.poner;
-  buzz(8); save(); renderMesa();
+/* Tocar una silla: si está libre se abre el menú de sentar; si está ocupada se
+   levanta a quien haya y se abre igual, que es lo que se quiere hacer después. */
+$('#mesa4').addEventListener('click', e => {
+  const b = e.target.closest('[data-silla]'); if (!b) return;
+  const i = +b.dataset.silla;
+  buzz(8);
+  if (S.mesa.ids[i]) { S.mesa.ids[i] = null; save(); renderMesa(); }
+  abrirSilla(i);
 });
 $('#mesa-nuevo').addEventListener('click', () => {
   S.mesa = mesaVacia();
@@ -3259,24 +3408,35 @@ $('#mesa-quien').addEventListener('click', e => {
   buzz(8); save(); renderMesa();
 });
 
-/* Dar de alta a alguien desde la mesa. Si hay silla libre se sienta —contra el
-   reloj, como al tocar un conocido—; si no, queda apuntado para otro día. */
-$('#mesa-alta-ok').addEventListener('click', () => {
-  const el = $('#mesa-alta-nombre'), nom = el.value.trim();
+// sentar a un conocido: entra en la silla que se abrió y el menú se cierra
+$('#sentar-lista').addEventListener('click', e => {
+  const b = e.target.closest('[data-sentar-en]'); if (!b) return;
+  if (sillaAbierta < 0) return;
+  S.mesa.ids[sillaAbierta] = b.dataset.sentarEn;
+  cerrarSilla();
+  buzz(10); save(); renderMesa();
+});
+// o darlo de alta con el nombre entero, si no estaba
+$('#sentar-ok').addEventListener('click', () => {
+  const el = $('#sentar-nombre'), nom = el.value.trim();
   if (!nom) { el.focus(); return; }
+  if (sillaAbierta < 0) return;
   const id = altaJugador(nom);
   if (!id) { toast('Ya no caben más jugadores guardados'); return; }
-  const libre = sillasLibres(S.mesa).find(i => !S.mesa.ids[i]);
-  if (libre === undefined) toast('Guardado. La mesa ya está llena');
-  else S.mesa.ids[libre] = id;
-  el.value = ''; mesaFiltro = ''; buzz(8); save(); renderMesa();
+  S.mesa.ids[sillaAbierta] = id;
+  cerrarSilla();
+  buzz(10); save(); renderMesa();
 });
-$('#mesa-alta-nombre').addEventListener('input', e => {
-  mesaFiltro = e.target.value; refrescarMesa();      // refrescar, no renderMesa:
-});                                                  // el completo mata el campo
-$('#mesa-alta-nombre').addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); $('#mesa-alta-ok').click(); }
+/* Buscar mientras se escribe. Solo se repinta la lista, no el menú entero: el
+   campo está dentro y un repintado completo se llevaría el foco. */
+$('#sentar-nombre').addEventListener('input', e => {
+  mesaFiltro = e.target.value; pintarSentar();
 });
+$('#sentar-nombre').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); $('#sentar-ok').click(); }
+});
+$('#sentar-cerrar').addEventListener('click', () => { buzz(8); cerrarSilla(); });
+$('#sentar').addEventListener('click', e => { if (e.target.id === 'sentar') cerrarSilla(); });
 
 /* Toda la pantalla de jugadores por delegación: se repinta entera en cada
    toque, así que enganchar en los botones no serviría de nada. */
@@ -3327,7 +3487,7 @@ $('#btn-jug').addEventListener('click', () => {
   buzz(8);
   if (!puedeFormal()) return toast('Pon tu nombre en Ajustes y podrás jugar en Formal');
   if (!conMesa() || !S.mesa)
-    return toast('Esta mano es Blitz. Cambia a anotar con jugadores para poder acceder.');
+    return toast('Hace falta una mesa con jugadores para poder cambiarlos.');
   view = 'jugadores'; render();
 });
 
@@ -3382,11 +3542,19 @@ $('#mesa-equipos').addEventListener('change', () => save());
 /* Tocar la ficha del centro cambia de modo. Con solo dos, alternar es más
    rápido que elegir de una lista, y la ficha ya dice cuál está puesto.
    Se guarda con el resto de la mesa. */
-$('#mesa-ficha').addEventListener('click', () => {
-  const m = S.mesa; if (!m) return;
-  const claves = Object.keys(MODES);
-  m.modo = claves[(claves.indexOf(m.modo || 'dom') + 1) % claves.length];
+function ponerModoMesa(k) {
+  const m = S.mesa; if (!m || !MODES[k]) return;
+  m.modo = k;
   buzz(10); save(); renderMesa();
+}
+// la ficha del centro sigue pasando al siguiente, ahora entre tres
+$('#mesa-ficha').addEventListener('click', () => {
+  const claves = Object.keys(MODES);
+  ponerModoMesa(claves[(claves.indexOf((S.mesa || {}).modo || 'dom') + 1) % claves.length]);
+});
+$('#mesa-cap').addEventListener('click', e => {
+  const b = e.target.closest('[data-mesamodo]'); if (!b) return;
+  ponerModoMesa(b.dataset.mesamodo);
 });
 
 // Empezar: los equipos sin nombre propio toman el de sus jugadores
@@ -3409,6 +3577,7 @@ $('#mesa-ok').addEventListener('click', () => {
   guardarColores(S.ident, S.accents);   // con los colores que se acaban de elegir
   S.mode   = m.modo || 'dom';
   S.target = topeDeJuego();
+  animar('#sc-game', 'anim-abajo');
   view = 'game';
   recount();
   buzz(12); save(); render();
@@ -3459,6 +3628,7 @@ function usarGrupo(e) {
   view = 'game';
   recount();
   buzz(12); save(); render();
+  animar('#sc-game', 'anim-abajo');
 }
 
 // en el lanzador solo queda "Seguir con…", la mesa que cortó la inactividad
@@ -3567,6 +3737,10 @@ document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
 
+  if ($('#sentar').classList.contains('on')) {
+    if (e.key === 'Escape') { e.preventDefault(); cerrarSilla(); }
+    return;
+  }
   // la mano abierta a detalle se cierra con Esc, como todo lo demás
   if ($('#mano').classList.contains('on')) {
     if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); cerrarMano(); }
@@ -3609,6 +3783,7 @@ document.addEventListener('keydown', e => {
     case 'Escape':                e.preventDefault(); closePad();     break;
     case 'p': case 'P':           e.preventDefault(); chipTap('pase'); break;
     case 'c': case 'C':           e.preventDefault(); chipTap('capi'); break;
+    case 't': case 'T':           e.preventDefault(); chipTap('tranque'); break;
   }
 });
 
@@ -3650,9 +3825,10 @@ setInterval(() => {
 // Las fichas de las tarjetas de modo son fijas (doble 6 / doble 9): se pintan
 // una sola vez al arrancar. Antes quedaban vacías porque nadie las rellenaba.
 $$('[data-mode]').forEach(card => {
-  const m = MODES[card.dataset.mode];
-  $('.tile', card).innerHTML = tileSVG(m.pips, m.pips);
-  $('.mode-sub', card).textContent = `Doble ${m.pips} · ${m.target} pts`;
+  const k = card.dataset.mode, m = MODES[k];
+  $('.tile', card).innerHTML = modoSVG(k);
+  $('.mode-sub', card).textContent = k === 'manos'
+    ? 'Sin puntos · solo quién gana' : `Doble ${m.pips} · ${m.target} pts`;
 });
 
 /* ============================================================

@@ -96,7 +96,7 @@ The `mono` style is not just a palette: it disables functionality. The reactions
 
 ### Modes carry their own target
 
-`MODES` holds `label`, `pips` and `target` per mode: Dominican is double-6 at 200, Cuban is double-9 at 300. **Picking a mode overwrites `S.target`** with that mode's default; from then on Ajustes wins until a mode is picked again. The mode cards' subtitles are generated from `MODES` at startup alongside their tiles, so adding a mode means touching only that constant and the markup for the card.
+`MODES` holds `label`, `pips` and `target` per mode: **Por manos** (tally marks, no tile, no point target), Dominican (double-6 at 200) and Cuban (double-9 at 300). **Picking a mode overwrites `S.target`**, always through `topeDeJuego()` — points for the two point modes, `paraGanar()` hands for Por manos. From then on Ajustes wins until a mode is picked again. `modoSVG(k)` gives each card its icon: the tally glyph for `manos`, its double tile for the others. The cards are generated from `MODES` at startup, so adding a mode means touching only that constant and the markup for the card.
 
 `tileSVG(top, bottom)` builds a tile from `LAYOUT`, a 3×3 grid of pip positions per number (0–9). It's used in the mode cards, the badge, the capicúa chip, the entry log, and the winner screen. The pip count comes from `MODES[S.mode].pips`.
 
@@ -134,6 +134,12 @@ Only the newest entry per team is editable — the same one that carries the X. 
 
 `padOps` is not a number but a list of operations (`{k:'d',v:'7'}`, `{k:'pase'}`, `{k:'capi'}`). That's what lets ⌫ undo the last action whether it was a digit or a shortcut. The total is derived by `padTotal()`; capicúa toggles (only one possible), pase corrido accumulates. Both are worth `CHIP_PTS`.
 
+The third shortcut, **Tranque**, is the odd one out: it records *how the hand ended*, not points. It stays out of `padTotal()` — `padBase()` is the digits, `padBonus()` counts only pase and capicúa — and stores `r.tranque = 1`, which paints a padlock in the log.
+
+**Tranque and capicúa cannot both be on.** If someone closed with a capicúa the hand wasn't blocked; if it was blocked, nobody closed. Marking one *releases* the other instead of refusing, so nobody has to remember to untick first — and `openPad()`'s rebuild prefers capicúa when correcting an old entry that somehow carries both, since that is the one that moves the score.
+
+Marking a tranque with nothing typed fires a reaction but **still marks**: the tile points still have to be counted, and marking first and typing after is a normal way to use the pad.
+
 ### Players, table and identity (2.00)
 
 Four top-level fields carry it: `S.anotador` (who is keeping score), `S.jugadores` (the catalogue of known people, each `{id, nombre, creado, visto, manos, ganadas, borrado}`), `S.mesa` (`{ids[4], grupo, desde, cerrada, armando, contada, nueva, modo}`) and `S.grupos` (saved quartets). Ids are stable strings, never names: people get renamed, and a rename would otherwise split someone's history in two silently. Deleting a player writes a `borrado` tombstone rather than removing the record, because old history entries point at that id.
@@ -153,11 +159,18 @@ Two consequences worth keeping:
 - **Colours belong to the people, not to the app.** `S.colores` remembers the accent pair per identity, so sitting down with the same four restores their colours, and a history row keeps the colours it was played with. History rows therefore set colour **inline** from `colorMano(r, t)`, never via the `.t0`/`.t1` classes, which point at the live `--a`/`--b` and would repaint three-day-old hands.
 - **Don't invent an identity for old data.** The Formal/Informal label in the history (`tipoMano(r)`) renders nothing when `r.ident` is missing, because that distinction didn't exist when those hands were played.
 
-### Three ways to play, two of which share a table
+### Two ways to sit down, three ways to score
 
-`S.tipo` is `'formal'` (UI: **Anotar con jugadores**), `'manos'` (**Jugar por manos**) or `'informal'` (**Blitz**). The internal keys never changed — they are in `S.tipo`, in every `S.ident`, and in every stored hand, so renaming them would break history. `TIPO_TXT` is the single place the user-facing words live.
+Two axes, and keeping them apart is the whole design:
 
-`conMesa()` is `formal || manos`: those two share the table, the players, the colours and the identity. **Every check about "does this game have players" must go through it.** Two bugs shipped from checking `S.tipo === 'formal'` directly — the Jugadores button painted itself enabled and then refused, and picking a saved group dropped you out of Por manos.
+- **`S.tipo` — with whom.** `'formal'` (UI: **Anotar con jugadores**: a real table, named people, colours, identity) or `'informal'` (**Blitz**: two anonymous columns).
+- **`S.mode` — what you score.** `'dom'`, `'cub'` or `'manos'` (**Por manos**).
+
+Por manos was a third `S.tipo` until 2.6x, and it was wrong: "we're counting hands" says nothing about who is at the table, and as a tipo it could never be played in Blitz. `load()`'s `esquema 5` migration rewrites a stored `tipo:'manos'` into `tipo:'formal', mode:'manos'`, so a tanda in progress when the update lands keeps its table.
+
+The internal keys never changed and must not: they are in `S.tipo`, in every `S.ident`, and in every stored hand. `TIPO_TXT` and `MODES[].label` are the only places the user-facing words live.
+
+**Every check about "does this game have players" goes through `conMesa()`, and every check about units goes through `porManos()`.** Two bugs shipped from testing `S.tipo` directly — the Jugadores button painted itself enabled and then refused, and picking a saved group dropped you out of Por manos.
 
 **Por manos is not a special case — it's the same game with different units.** A tanda at "mejor de X" is a match where each hand is worth 1 point and `S.target` is `paraGanar()` (half of X, rounded up). Everything else falls out for free: the score, "Faltan 2", the bar, one history row per tanda with `4 — 2` in it, the games tally, and lisa meaning *won without conceding a single hand*. `reg.manos` and `reg.mejor` are stamped on the record so the history knows what the numbers mean. An earlier attempt kept hands outside the machinery and produced one history row per hand; don't go back there.
 
@@ -199,7 +212,11 @@ For two players the seats are **0 and 1**, not 0 and 2 — those two are partner
 
 Formal needs a name: `puedeFormal()` is false when `S.anotador` is empty, and without one the app stays Informal for good.
 
-`#sc-mesa` is the square table. It has **two** paint functions and the split is not cosmetic: `renderMesa()` rebuilds the markup, `refrescarMesa()` only updates the derived bits. The seat `change` handler must call `refrescarMesa()` — calling the full one there destroys the sibling `<input>`s mid-edit, which showed up as only two of four players ever being registered.
+`#sc-mesa` is the square table. It has **two** paint functions and the split is not cosmetic: `renderMesa()` rebuilds the markup, `refrescarMesa()` only updates the derived bits. Calling the full one from a handler that fires mid-interaction destroys its siblings — that is how only two of four players ever got registered.
+
+Seats are **buttons, not inputs**. Tapping one opens `#sentar` (`sillaAbierta`, `abrirSilla` / `cerrarSilla` / `pintarSentar`): an overlay listing the known players, with a field for a name that isn't in the catalogue yet. Tapping an occupied seat empties it and reopens the picker. The loose list of registered players and the separate "add a player" field that used to sit under the table are gone — there is one thing to tap, and it is in the place where the answer goes.
+
+`S.mesa.modo` records which mode the table was built for, read through `mesaPorManos(m)`. The tanda-length stepper needs it: while the table is being built there is no `S.mode` yet, and it has to know whether `S.target` means points or hands.
 
 ### The Jugadores screen edits a draft, not the table
 
@@ -277,3 +294,5 @@ Archive the version that is actually good: the copy is what someone falls back t
 - The board's team name is an editable `<input>` in Informal and a read-only stack of player names (`.names2`) in Formal — the name comes from who is seated, so editing it there would contradict the table with nothing to reflect it.
 - The style picker (Chercha / Clásico) lives in **two** places: the three-dot menu during a hand, and the top of Ajustes before one starts, since the menu doesn't exist on the launcher. `#cfg-sec-estilo` hides itself when `S.mode` is set, so only one is ever reachable.
 - The score pad shows **no team name on purpose**. `.aim` is a two-column grid that parks an up-arrow over the half matching the team being scored, which lines up with that team's board column; the pad's `--pt` tint carries the same information. Don't "fix" it by adding a label back — the name lives on in the `aria-label` for screen readers.
+- **`view === 'stats'` no longer implies a game is running.** The history is reachable from the launcher (only with at least one saved hand — an empty history is not a screen), so `#sc-stats` is toggled on `view` alone and its back arrow returns to whichever of the two it came from. The guard that matters is the other direction: clearing the history while looking at it from the launcher has to close the screen, or it stays open and blank.
+- The slide animations run on `.screen > *`, never on `.screen` itself — that one is the flex column that holds the layout together, and transforming it moves the whole page. `animar()` removes the class before re-adding it and forces a reflow, or the same animation twice in a row plays once. There is a `prefers-reduced-motion` opt-out.
