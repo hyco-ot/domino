@@ -286,21 +286,15 @@ button{border:0;background:none;cursor:pointer}
 #sc-game .badge{margin-right:auto}
 
 /* contador de partida de la sesión */
-/* Tira de números que se arrastra de lado: con siete opciones, una fila de
-   botones fijos las dejaría en nada de ancho cada una. */
-.tira{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;
-  padding:10px 2px;scroll-snap-type:x proximity}
-.tira::-webkit-scrollbar{display:none}
-.tira[hidden]{display:none}
-.tira button{flex:0 0 auto;scroll-snap-align:center;min-width:52px;padding:11px 0;
-  border-radius:14px;border:1px solid var(--line);color:var(--dim);
-  font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
-.tira button[aria-checked="true"]{border-color:var(--ok);color:var(--ok);
-  box-shadow:inset 0 0 0 1px var(--ok)}
-.tira button:active{background:var(--sunk)}
-.cuanta{padding:0 20px 4px}
+/* En el tablero el mismo control, en pequeño: ahí compite por sitio con el
+   marcador, no como en la mesa, donde es lo que se está decidiendo. */
+.cuanta{display:flex;align-items:center;justify-content:center;gap:11px;padding:0 20px 6px}
 .cuanta[hidden]{display:none}
-.cuanta .linky{margin:0}
+.cuanta-lbl{font-size:11.5px;font-weight:600;color:var(--dim)}
+.stepper.mini{padding:5px;gap:8px;border-radius:14px}
+.stepper.mini button{width:32px;height:32px;border-radius:10px;font-size:19px}
+.stepper.mini .val{min-width:56px;font-size:19px}
+.stepper button:disabled{opacity:.3}
 .gamebar{display:flex;align-items:center;gap:12px;padding:2px 20px 8px}
 .gamebar .rule{flex:1;height:1px;background:var(--line)}
 .gamebar .ord{font-size:11px;font-weight:700;letter-spacing:.22em;
@@ -744,7 +738,21 @@ button{border:0;background:none;cursor:pointer}
 /* el diálogo enumera lo marcado: los saltos de línea tienen que verse */
 #ask-msg{white-space:pre-line}
 
+/* la ficha de la mano abierta a detalle */
+.mano-mar{display:flex;align-items:baseline;justify-content:center;gap:9px;
+  font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;margin-bottom:4px}
+.mano-mar .d{font-size:19px;color:var(--dim);font-weight:600}
+.mano-eq{display:flex;justify-content:center;gap:9px;margin-bottom:16px;
+  font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.mano-eq .vs{color:var(--line)}
+.mano-fila{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  padding:9px 0;font-size:13.5px}
+.mano-fila + .mano-fila{border-top:1px solid var(--line)}
+.mano-fila .k{color:var(--dim);flex:0 0 auto}
+.mano-fila .v{font-weight:600;text-align:right;min-width:0;overflow-wrap:anywhere}
+.mano-nota{font-size:12px;color:var(--dim);line-height:1.45;margin:14px 0 4px}
 .ask-btns{display:flex;gap:9px}
+.ask-btns [hidden]{display:none}
 .ask-btns button{flex:1;padding:12px;border-radius:14px;font-weight:600;font-size:14.5px}
 .ask-btns .no{border:1px solid var(--line);color:var(--dim)}
 .ask-btns .yes{background:var(--ok);color:var(--on-solid)}
@@ -899,7 +907,11 @@ button{border:0;background:none;cursor:pointer}
           </div>
           <div id="mesa-mejor" hidden>
             <div class="cfg-lbl" style="margin-top:16px">¿Hasta la cuánta?</div>
-            <div class="tira" id="mesa-mejor-tira"></div>
+            <div class="stepper">
+              <button data-mejor-paso="-2" id="mesa-mejor-menos" aria-label="Menos dos">−</button>
+              <span class="val" id="mesa-mejor-val">5/3</span>
+              <button data-mejor-paso="2" id="mesa-mejor-mas" aria-label="Más dos">+</button>
+            </div>
           </div>
           <div class="cfg-lbl" style="margin-top:16px">¿Y tú?</div>
           <div class="seg">
@@ -1022,8 +1034,12 @@ button{border:0;background:none;cursor:pointer}
     <!-- Por manos se puede cambiar de cuántas es la tanda con ella empezada:
          se decide en la mesa muchas veces, y bajar a rearmarla para eso sobra. -->
     <div class="cuanta" id="cuanta" hidden>
-      <button class="linky" id="cuanta-btn"></button>
-      <div class="tira" id="cuanta-tira" hidden></div>
+      <span class="cuanta-lbl">¿Hasta la cuánta?</span>
+      <div class="stepper mini">
+        <button data-mejor-paso="-2" id="cuanta-menos" aria-label="Menos dos">−</button>
+        <span class="val" id="cuanta-val">5/3</span>
+        <button data-mejor-paso="2" id="cuanta-mas" aria-label="Más dos">+</button>
+      </div>
     </div>
 
     <div class="board" id="board">
@@ -1295,6 +1311,19 @@ button{border:0;background:none;cursor:pointer}
   </div>
 </div>
 
+<!-- una mano del historial, a detalle -->
+<div class="ask" id="mano">
+  <div class="ask-card">
+    <h3 id="mano-titulo"></h3>
+    <p id="mano-cuando"></p>
+    <div id="mano-cuerpo"></div>
+    <div class="ask-btns">
+      <button class="no" id="mano-cerrar">Cerrar</button>
+      <button class="yes" id="mano-otra" hidden>Jugar otra con estos</button>
+    </div>
+  </div>
+</div>
+
 <!-- ganador -->
 <div class="win" id="win">
   <span class="tile" id="win-tile"></span>
@@ -1446,7 +1475,7 @@ const blank = () => ({
      historial le colgaba a los de ahora las victorias de los de antes. */
   ident:     '',
   colores:   [],     // color de cada tanda: [{ ident, accents }], la más reciente primero
-  mejorDe: 5,        // "Mejor de X" en Por manos: 3, 5 o 7
+  mejorDe: 5,        // Por manos: de cuántas es la tanda (impares del 3 al 15)
   avisoCache: 1,     // ¿ya se le avisó de reinstalar? 1 en una instalación nueva
   esquema:   4       // versión del estado guardado; la usa load() para migrar
 });
@@ -1515,7 +1544,6 @@ const porNombre = (a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity
    "Martín" con tilde cuando esta buscando con el pulgar. No persiste: es el
    estado de un campo de texto. */
 let jugFiltro = '', mesaFiltro = '', jugExtra = false;
-let cuantaAbierta = false;   // no persiste: es un desplegable del tablero
 let mesaCustom = false;      // ni este: el acordeón de la mesa
 const pelado = t => (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const casaNombre = (nombre, filtro) => !filtro || pelado(nombre).includes(pelado(filtro));
@@ -1879,6 +1907,7 @@ function render() {
     jugExtra = false;                      // vuelve plegado, como se encontro
   }
   if (view !== 'mesa') { mesaFiltro = ''; $('#mesa-alta-nombre').value = ''; mesaCustom = false; }
+  if (view !== 'stats' && manoAbierta >= 0) cerrarMano();
   $('#sc-mode').classList.toggle('on',   !inGame && view === 'game');
   $('#sc-mesa').classList.toggle('on',   !inGame && view === 'mesa');
   $('#sc-game').classList.toggle('on',    inGame && view === 'game');
@@ -1900,15 +1929,10 @@ function render() {
   // el nombre del modo se va de la vista, pero sigue ahí para lectores de pantalla
   $('#badge').setAttribute('aria-label', `Tranque, modo ${MODES[S.mode].label}`);
   $('#ord').textContent = porManos()
-    ? `Mejor de ${mejorDe()}`
+    ? cuantaTxt(mejorDe())
     : `${ordinal(gameNo())} mano`;
   $('#cuanta').hidden = !porManos();
-  if (porManos()) {
-    $('#cuanta-btn').textContent = cuantaAbierta
-      ? 'Listo' : `¿Hasta la cuánta? · Mejor de ${mejorDe()}`;
-    $('#cuanta-tira').hidden = !cuantaAbierta;
-    if (cuantaAbierta) $('#cuanta-tira').innerHTML = tiraMejorHTML();
-  }
+  if (porManos()) pintarMejor('#cuanta-val', '#cuanta-menos', '#cuanta-mas');
   // cambiar de modo reparte fichas nuevas: solo tiene sentido antes de anotar
   const puedeModo = !S.rounds.length;
   $('#mi-mode').classList.toggle('off', !puedeModo);
@@ -1978,7 +2002,7 @@ function render() {
     const w = S.over;
     $('#win-tile').innerHTML = tileSVG(pips, pips);
     $('#win-cap').textContent = porManos()
-      ? `Mejor de ${mejorDe()}`
+      ? cuantaTxt(mejorDe())
       : `${ordinal(gameNo())} mano`;
     const lisa = S.style === 'chercha' && isLisa();
     $('#win-lisa').hidden = !lisa;
@@ -2089,9 +2113,16 @@ const porManos = () => S.tipo === 'manos';
 /* Mejor de 5 son tres manos: la mitad más una. Siempre impar, para que no pueda
    quedar en tablas. */
 // impares, para que una tanda no pueda quedar en tablas
-const MEJORES = [3, 5, 7, 9, 11, 13, 15];
-const mejorDe = () => MEJORES.includes(S.mejorDe) ? S.mejorDe : 5;
+const MEJOR_MIN = 3, MEJOR_MAX = 25;
+/* Siempre impar: una tanda de número par puede quedar en tablas. Por eso se
+   mueve de dos en dos, y por eso un valor par guardado se descarta. */
+const mejorDe = () => {
+  const v = +S.mejorDe;
+  return (v >= MEJOR_MIN && v <= MEJOR_MAX && v % 2 === 1) ? v : 5;
+};
 const paraGanar = () => Math.floor(mejorDe() / 2) + 1;
+/* "5/3": de cinco, ganando tres. Nadie dice "un mejor de cinco" en la mesa. */
+const cuantaTxt = v => `${v}/${Math.floor(v / 2) + 1}`;
 /* El tope de la partida: puntos si se anotan, manos si se juega por manos. Se
    aplica al empezar, que es lo único que hace distinto a Por manos. */
 const topeDeJuego = () => porManos() ? paraGanar() : MODES[S.mode || 'dom'].target;
@@ -2115,8 +2146,29 @@ function marcasHTML(n) {
   }).join('') + '</span>';
 }
 
-const tiraMejorHTML = () => MEJORES.map(v =>
-  `<button data-mejor="${v}" aria-checked="${v === mejorDe()}">${v}</button>`).join('');
+/* Pinta los dos sitios donde se elige: el de la mesa y el del tablero. Los
+   botones se apagan en los extremos, para que se vea que ahí se acabó. */
+function pintarMejor(val, menos, mas) {
+  const v = mejorDe();
+  if ($(val)) $(val).textContent = cuantaTxt(v);
+  if ($(menos)) $(menos).disabled = v <= MEJOR_MIN;
+  if ($(mas))   $(mas).disabled   = v >= MEJOR_MAX;
+}
+
+/* Subir o bajar de cuántas es la tanda. En el tablero pasa por setTarget, que
+   cierra la tanda ahí mismo si alguien ya tiene las que hacen falta. */
+function pasoMejor(paso) {
+  const v = Math.max(MEJOR_MIN, Math.min(MEJOR_MAX, mejorDe() + paso));
+  if (v === mejorDe()) return;
+  S.mejorDe = v;
+  buzz(6);
+  if (view === 'mesa') {
+    if (porManos()) S.target = paraGanar();
+    save(); refrescarMesa();
+  } else {
+    setTarget(paraGanar());
+  }
+}
 
 /* El lanzador tiene dos pasos y cuál se ve sale de S.tipo, no de una variable
    suelta: así una recarga a medias no te deja en ninguna parte. */
@@ -2230,7 +2282,7 @@ function refrescarMesa() {
     .filter(j => !puestos.includes(j.id) && casaNombre(j.nombre, mesaFiltro))
     .sort(porNombre)
     .map(j => `<button data-poner="${j.id}">${escapa(j.nombre)}</button>`).join('');
-  $('#mesa-mejor-tira').innerHTML = tiraMejorHTML();
+  pintarMejor('#mesa-mejor-val', '#mesa-mejor-menos', '#mesa-mejor-mas');
   $$('[data-cuantos]').forEach(b =>
     b.setAttribute('aria-checked', +b.dataset.cuantos === mesaCuantos(m)));
   $$('[data-yojuego]').forEach(b =>
@@ -2475,7 +2527,7 @@ function renderConfig() {
   const conNombre = puedeFormal();
   $('#cfg-sec-jugadores').hidden = !conNombre;
   $('#cfg-sin-nombre').hidden    = conNombre;
-  // por manos el tope no son puntos: se elige al armar la mesa, con "¿Mejor de?"
+  // por manos el tope no son puntos: se elige con "¿Hasta la cuánta?"
   $('#cfg-sec-puntos').hidden    = !S.mode || porManos();
   // los topes salen de las constantes: así el control no se despista si cambian
   const z = clampZoom(S.zoom);
@@ -2559,7 +2611,7 @@ const cuandoHTML = r => {
 const marcador = r =>
   `<span class="hpts"><b style="color:${colorMano(r, 0)}">${r.scores[0]}</b><span class="d">—</span><b style="color:${colorMano(r, 1)}">${r.scores[1]}</b></span>`;
 
-function manoHTML(r, vista) {
+function manoHTML(r, vista, idx) {
   const m = MODES[r.mode];
   const ficha = m ? `<span class="hficha">${tileSVG(m.pips, m.pips)}</span>` : '';
   const n0 = teamName(0, r.names), n1 = teamName(1, r.names);
@@ -2567,23 +2619,23 @@ function manoHTML(r, vista) {
   if (vista === 'lista') {
     // los que ganaron; en informal no hay jugadores y queda el nombre de equipo
     const gn = parejaMano(r, r.w) || (r.w === 0 ? n0 : n1);
-    return `<div class="hrow lista">
+    return `<div class="hrow lista" data-mano="${idx}">
       ${ficha}${marcador(r)}
       <span class="hwin" style="color:${colorMano(r, r.w)}">${gn}</span>
       <span class="hwhen">${fmtWhen(r.ts)}</span>
     </div>`;
   }
   if (vista === 'pastillas') {
-    return `<div class="hcard">
-      <span class="htop">${ficha}<span>${r.manos ? `de ${r.mejor || 5}` : r.target}</span></span>
+    return `<div class="hcard" data-mano="${idx}">
+      <span class="htop">${ficha}<span>${r.manos ? cuantaTxt(r.mejor || 5) : r.target}</span></span>
       ${marcador(r)}
       <span class="hwin" style="color:${colorMano(r, r.w)}">${r.w === 0 ? n0 : n1}</span>
       ${cuandoHTML(r)}
     </div>`;
   }
-  return `<div class="hrow">
+  return `<div class="hrow" data-mano="${idx}">
     <div class="hmeta">${cuandoHTML(r)}
-      <span class="hmode"><span>${r.manos ? `Mejor de ${r.mejor || 5}` : r.target}</span>${ficha}</span></div>
+      <span class="hmode"><span>${r.manos ? cuantaTxt(r.mejor || 5) : r.target}</span>${ficha}</span></div>
     <div class="hline">
       ${marcador(r)}
       <div class="hteams">${[n0, n1].map((nm, t) => `<span class="hcol">` +
@@ -2593,6 +2645,90 @@ function manoHTML(r, vista) {
         jugadoresHTML(r, t) + `</span>`).join('<span class="hvs">·</span>')}</div>
     </div>
   </div>`;
+}
+
+let manoAbierta = -1;   // no persiste: es un cartel
+
+/* Qué se puede rehacer de una mano guardada. Las de Blitz siempre; las de
+   jugadores solo si siguen estando los cuatro — a alguien borrado no se le
+   puede volver a sentar. */
+const puedeRehacer = r => !r.mesa
+  ? true
+  : grupoCompleto(r.mesa) && r.mesa.every(id => !!jugadorDe(id));
+
+function abrirMano(i) {
+  const r = S.history[i];
+  if (!r) return;
+  manoAbierta = i;
+  const M = MODES[r.mode], tipo = TIPO_TXT[tipoMano(r)] || '';
+  const gano = teamName(r.w, r.names);
+  const lisa = r.scores[1 - r.w] === 0;
+
+  $('#mano-titulo').textContent = `Ganó ${gano}`;
+  $('#mano-cuando').textContent = fmtWhen(r.ts);
+
+  const fila = (k, v) => `<div class="mano-fila"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+  const filas = [];
+  if (tipo) filas.push(fila('Cómo se jugó', escapa(tipo)));
+  if (M)    filas.push(fila('Modo', `${escapa(M.label)} · doble ${M.pips}`));
+  filas.push(fila(r.manos ? 'Tanda' : 'Puntos para ganar',
+                  r.manos ? cuantaTxt(r.mejor || 5) : r.target));
+  if (r.mesa) [0, 1].forEach(t => {
+    const p = idsEquipo(t, r.mesa).map(nombreDeId).filter(Boolean);
+    if (p.length) filas.push(fila(escapa(teamName(t, r.names)), escapa(p.join(' y '))));
+  });
+
+  $('#mano-cuerpo').innerHTML =
+    `<div class="mano-mar">
+       <b style="color:${colorMano(r, 0)}">${r.scores[0]}</b><span class="d">—</span
+       ><b style="color:${colorMano(r, 1)}">${r.scores[1]}</b>
+     </div>
+     <div class="mano-eq">
+       <span style="color:${colorMano(r, 0)}">${escapa(teamName(0, r.names))}</span>
+       <span class="vs">vs</span>
+       <span style="color:${colorMano(r, 1)}">${escapa(teamName(1, r.names))}</span>
+     </div>` + filas.join('') +
+    (lisa ? `<p class="mano-nota">Fue lisa: ${escapa(gano)} ganó sin dejar anotar.</p>` : '') +
+    /* Se dice lo que no hay, en vez de dejar pensar que se perdió: una mano
+       guardada solo recuerda cómo acabó, no cada anotación. */
+    `<p class="mano-nota">De una mano terminada se guarda cómo quedó, no cada
+      anotación, así que no hay nada que seguir anotando. Lo que sí se puede es
+      montar la mesa otra vez tal cual estaba.</p>`;
+
+  $('#mano-otra').hidden = !puedeRehacer(r);
+  $('#mano').classList.add('on');
+}
+
+function cerrarMano() {
+  manoAbierta = -1;
+  $('#mano').classList.remove('on');
+}
+
+/* Volver a montar la mesa como estaba: la misma gente en las mismas sillas, sus
+   colores, sus nombres, su modo y su tope. La mano empieza de cero — lo que se
+   repite es con quién y a qué, no el marcador. */
+function rehacerMano(i) {
+  const r = S.history[i];
+  if (!r || !puedeRehacer(r)) return;
+  cerrarMano();
+
+  S.tipo = r.manos ? 'manos' : (r.mesa ? 'formal' : 'informal');
+  S.mode = r.mode || 'dom';
+  if (r.mesa) {
+    S.mesa = { ...mesaVacia(), ids: [...r.mesa], armando: false,
+               modo: S.mode, grupo: r.grupo || null,
+               cuantos: idsEquipo(0, r.mesa).length > 1 ? 4 : 2 };
+  }
+  S.names = [...r.names];
+  if (r.manos && r.mejor) S.mejorDe = r.mejor;
+  S.target = r.manos ? paraGanar() : (r.target || MODES[S.mode].target);
+
+  nuevaTanda(identAhora());          // otra tanda: la cuenta de ganadas empieza
+  S.accents = [...(r.accents || S.accents)];
+  guardarColores(S.ident, S.accents);
+  view = 'game';
+  newGame();                         // vacía la mano, guarda y pinta
+  toast('Mesa lista con los mismos');
 }
 
 function renderStats() {
@@ -2623,7 +2759,9 @@ function renderStats() {
   const sinMarcar  = h.length - formales - informales - pormanos;
   const yo = anotadorJugador();
 
-  const manos = h.slice().reverse().map(r => manoHTML(r, vista)).join('');
+  // el indice del registro viaja con la fila: la lista va del reves
+  const manos = h.map((r, i) => ({ r, i })).reverse()
+    .map(({ r, i }) => manoHTML(r, vista, i)).join('');
   // las pastillas van sueltas en rejilla; las otras dos, dentro de una tarjeta
   const lista = vista === 'pastillas'
     ? `<div class="hpills">${manos}</div>`
@@ -3111,12 +3249,8 @@ $('#mesa-custom-btn').addEventListener('click', () => {
 /* Cuántos son y si juegas: las dos cambian de quién es cada silla, así que las
    dos vacían la mesa por el mismo motivo. */
 $('#mesa-quien').addEventListener('click', e => {
-  const j = e.target.closest('[data-mejor]');
-  if (j) {
-    S.mejorDe = +j.dataset.mejor;
-    if (porManos()) S.target = paraGanar();
-    buzz(8); save(); refrescarMesa(); return;
-  }
+  const j = e.target.closest('[data-mejor-paso]');
+  if (j) { pasoMejor(+j.dataset.mejorPaso); return; }
   const c = e.target.closest('[data-cuantos]'), y = e.target.closest('[data-yojuego]');
   if (!c && !y) return;
   const m = S.mesa; if (!m) return;
@@ -3184,17 +3318,9 @@ $('#jug-extra-btn').addEventListener('click', () => {
 
 /* Los jugadores solo existen en Formal, y Formal necesita un nombre. Cada
    "no se puede" dice lo que falta para poder. */
-$('#cuanta-btn').addEventListener('click', () => {
-  cuantaAbierta = !cuantaAbierta; buzz(8); render();
-});
-$('#cuanta-tira').addEventListener('click', e => {
-  const b = e.target.closest('[data-mejor]'); if (!b) return;
-  S.mejorDe = +b.dataset.mejor;
-  cuantaAbierta = false;
-  buzz(8);
-  /* setTarget y no S.target a pelo: si alguien ya tiene las que hacen falta,
-     la tanda se cierra ahí mismo, igual que al bajar el tope de puntos. */
-  setTarget(paraGanar());
+$('#cuanta').addEventListener('click', e => {
+  const b = e.target.closest('[data-mejor-paso]'); if (!b) return;
+  pasoMejor(+b.dataset.mejorPaso);
 });
 
 $('#btn-jug').addEventListener('click', () => {
@@ -3379,8 +3505,10 @@ $('#btn-result').addEventListener('click', () => { buzz(10); winSeen = false; re
 
 // el selector de vista se repinta con la lista, así que va por delegación
 $('#stats-body').addEventListener('click', e => {
-  const b = e.target.closest('[data-hview]'); if (!b) return;
-  buzz(8); S.histView = b.dataset.hview; save(); render();
+  const b = e.target.closest('[data-hview]');
+  if (b) { buzz(8); S.histView = b.dataset.hview; save(); render(); return; }
+  const m = e.target.closest('[data-mano]');
+  if (m) { buzz(8); abrirMano(+m.dataset.mano); }
 });
 
 const menu = $('#menu');
@@ -3427,6 +3555,9 @@ $('#win-new').addEventListener('click', () => {
   ofrecerGrupo();   // se acaba de jugar con ellos, y ya no hay nada en pantalla
 });
 $('#win-close').addEventListener('click', () => { winSeen = true; render(); });
+$('#mano-cerrar').addEventListener('click', () => { buzz(8); cerrarMano(); });
+$('#mano-otra').addEventListener('click', () => { buzz(12); rehacerMano(manoAbierta); });
+$('#mano').addEventListener('click', e => { if (e.target.id === 'mano') cerrarMano(); });
 
 /* ============================================================
    Teclado físico (para cuando se usa en la computadora)
@@ -3436,6 +3567,11 @@ document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
 
+  // la mano abierta a detalle se cierra con Esc, como todo lo demás
+  if ($('#mano').classList.contains('on')) {
+    if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); cerrarMano(); }
+    return;
+  }
   // diálogo de confirmación delante: Enter acepta, Esc cancela
   if ($('#ask').classList.contains('on')) {
     const chk = $('#ask-check');

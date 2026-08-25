@@ -163,10 +163,19 @@ Two consequences worth keeping:
 
 Two consequences to keep in mind:
 
-- `setTarget()` clamps to `TARGET_MIN`/`TARGET_MAX`, which are **points**. Under `porManos()` the target is hands (2–8), so the clamp is skipped — otherwise "mejor de 3" asked for 2 and got 50, and the tanda never ended.
+- `setTarget()` clamps to `TARGET_MIN`/`TARGET_MAX`, which are **points**. Under `porManos()` the target is hands, so the clamp is skipped — otherwise a 3-hand tanda asked for 2 and got 50, and never ended.
+- The tanda length is written **`5/3`** — total over hands-needed, which is how it is said at the table. `cuantaTxt()` is the only place that wording lives. It is chosen with a stepper of **±2 between 3 and 25**: the step is what guarantees an odd number, and an even tanda can end in a tie.
 - The score renders as tally marks (`marcasHTML`), grouped in fives with the fifth crossing the other four, stacked vertically. `.marcas` carries a `min-height` so the board doesn't jump between zero and one.
 
 **Blitz forces `BLITZ_ACCENTS` (azul/rojo) on entry**, overriding whatever `nuevaTanda` remembered. Colours belong to people, and Blitz never asks who is playing — so there they belong to nobody. It is also the only mode with no way to change them, since the colour picker lives on the Jugadores screen.
+
+### A stored hand remembers how it ended, not how it went
+
+Tapping any history row opens `abrirMano()`: score, teams, players, mode, target, and whether it was a lisa. From there `rehacerMano()` rebuilds the table exactly — same people in the same seats, their colours, names, mode and target — and starts a **fresh** hand.
+
+There is nothing to "resume", and the detail sheet says so out loud rather than letting someone assume it was lost: `newGame()` clears `S.rounds`, and the record only ever held `scores` and `w`. Storing every round of 100 hands would multiply the state, and hands played before such a change would never have them anyway.
+
+`rehacerMano()` is hidden when any player on that table has since been deleted — a tombstoned id still resolves to a name for display, but it cannot be seated again.
 
 ### The habitual group offers itself
 
