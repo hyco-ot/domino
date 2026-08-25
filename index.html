@@ -314,15 +314,25 @@ button{border:0;background:none;cursor:pointer}
 .badge .appname{font-size:17px;font-weight:800;letter-spacing:-.02em;color:var(--txt)}
 .badge .appname span{color:var(--ok)}
 /* Título a la izquierda y menú a la derecha: con un solo botón al otro lado,
-   centrar el título dejaba la barra descompensada. */
-#sc-game .badge{margin-right:auto}
+   centrar el título dejaba la barra descompensada. El hueco lo hace un .grow y
+   no un margen, porque entre los dos va el botón de la tanda. */
+#sc-game .badge{flex:0 0 auto}
+/* El control de la tanda no vive en la barra: aquí está su nombre y el acordeón
+   se abre debajo. Siempre abierto competía por sitio con el marcador. */
+.cuanta-btn{display:flex;align-items:center;gap:5px;flex:0 1 auto;min-width:0;
+  padding:5px 9px;border-radius:11px;border:1px solid var(--line);
+  font-size:11.5px;font-weight:700;color:var(--dim);white-space:nowrap;overflow:hidden}
+.cuanta-btn[hidden]{display:none}
+.cuanta-btn:active{background:var(--sunk)}
+.cuanta-btn .chev{width:13px;height:13px;flex:0 0 auto;fill:none;stroke:currentColor;
+  stroke-width:2.6;stroke-linecap:round;transition:transform .18s ease}
+.cuanta-btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
 
 /* contador de partida de la sesión */
 /* En el tablero el mismo control, en pequeño: ahí compite por sitio con el
    marcador, no como en la mesa, donde es lo que se está decidiendo. */
-.cuanta{display:flex;align-items:center;justify-content:center;gap:11px;padding:0 20px 6px}
+.cuanta{display:flex;align-items:center;justify-content:center;padding:0 20px 8px}
 .cuanta[hidden]{display:none}
-.cuanta-lbl{font-size:11.5px;font-weight:600;color:var(--dim)}
 .stepper.mini{padding:5px;gap:8px;border-radius:14px}
 .stepper.mini button{width:32px;height:32px;border-radius:10px;font-size:19px}
 .stepper.mini .val{min-width:56px;font-size:19px}
@@ -380,9 +390,15 @@ button{border:0;background:none;cursor:pointer}
 /* El marcador a rayas ocupa el sitio del número, así que hereda su color y se
    apila hacia abajo. El min-height evita que el tablero pegue un salto al pasar
    de cero a una raya. */
-.marcas{display:flex;flex-direction:column;align-items:center;gap:7px;
-  min-height:calc(clamp(52px,19vw,108px) * .60)}
-.marca5{display:block;height:calc(clamp(52px,19vw,108px) * .60);width:auto;
+/* Los cincos van de dos en dos: el segundo a la derecha del primero y el
+   tercero abajo otra vez, cada fila centrada. El ancho de un grupo lleno es su
+   alto por 34/24, que es su viewBox. Con poca anchura —zoom alto, pantalla
+   estrecha— el 100% gana y el propio wrap los deja en columna, como antes. */
+.marcas{--mh:calc(clamp(52px,19vw,108px) * .60);--mw:calc(var(--mh) * 1.42);
+  display:flex;flex-wrap:wrap;justify-content:center;align-content:flex-start;
+  gap:7px 9px;margin:0 auto;min-height:var(--mh);
+  max-width:min(100%, calc(var(--mw) * 2 + 9px))}
+.marca5{display:block;height:var(--mh);width:auto;
   fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
 .score{--k:1;
   font-size:calc(clamp(52px,19vw,108px) * var(--k));
@@ -398,14 +414,19 @@ button{border:0;background:none;cursor:pointer}
   color:var(--on-solid);font-weight:700;font-size:15px;transition:transform .1s ease}
 .add:active{transform:scale(.94)}
 .add:disabled{opacity:.35}
-/* Por manos, deshacer va al lado de ganar: es el mismo gesto al reves y no
-   tiene sentido buscarlo en otra parte de la pantalla. */
-.acts{display:flex;align-items:center;gap:8px;margin-top:6px}
-.menos{width:40px;height:40px;flex:0 0 auto;border-radius:13px;
+/* Por manos, quitar y sumar van a los lados de ganar: son el mismo gesto y no
+   tienen sentido en otra parte de la pantalla. Uno a cada lado y del mismo
+   tamaño, para que lo de en medio caiga bajo el marcador y no torcido. */
+.acts{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px}
+.menos, .mas2{width:40px;height:40px;flex:0 0 auto;border-radius:13px;
   border:1px solid var(--line);color:var(--dim);font-size:15px;font-weight:700}
-.menos[hidden]{display:none}
-.menos:disabled{opacity:.3}
-.menos:active{background:var(--sunk)}
+/* display propio: sin esto, hidden no las escondería */
+.menos[hidden], .mas2[hidden]{display:none}
+.menos:disabled, .mas2:disabled{opacity:.3}
+.menos:active, .mas2:active{background:var(--sunk)}
+/* con "+1" de etiqueta el botón se queda en nada; se le da cuerpo para que
+   siga siendo el que se busca sin mirar */
+.acts.pm .add{min-width:104px}
 
 /* ---------- puntos anotados de cada equipo (el más nuevo arriba) ---------- */
 .entries{flex:1;min-height:0;width:100%;overflow-y:auto;scrollbar-width:none;
@@ -428,6 +449,12 @@ button{border:0;background:none;cursor:pointer}
 /* por manos: la que se acaba de ganar, del color de su equipo. La siguiente que
    entre, de quien sea, la devuelve al gris. */
 .erow.ahora .ewhen{color:var(--tc);opacity:1;font-weight:700;font-size:11px}
+/* Por manos la fila es solo la hora: sin cifra ni X, la rejilla de tres celdas
+   la dejaba pegada a la izquierda y en cuerpo de pie de página. Aquí es lo
+   único que hay, así que va centrada y se lee desde la mesa. */
+.erow.soloh{display:flex;justify-content:center}
+.erow.soloh .ewhen{font-size:14px;opacity:.8}
+.erow.soloh.ahora .ewhen{font-size:15px;opacity:1}
 .erow .pts{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--dim)}
 .erow.last .pts{color:var(--tc);font-weight:700;
   padding:2px 8px;border-radius:9px;border:1px dashed var(--line)}
@@ -1054,6 +1081,10 @@ button{border:0;background:none;cursor:pointer}
         <span class="tile" id="badge-tile"></span>
         <span class="appname">Tran<span>que</span></span>
       </div>
+      <!-- Solo por manos: nombra la tanda y abre su acordeón aquí debajo. -->
+      <button class="cuanta-btn" id="btn-cuanta" hidden aria-expanded="false"
+              aria-controls="cuanta">¿Hasta la cuánta?<svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+      <div class="grow"></div>
       <button class="icon-btn" id="btn-jug" aria-label="Jugadores">
         <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.4 20a5.6 5.6 0 0 1 11.2 0"/><circle cx="17.2" cy="9.2" r="2.5"/><path d="M16.4 14.8A4.9 4.9 0 0 1 20.6 20"/></svg>
       </button>
@@ -1069,9 +1100,9 @@ button{border:0;background:none;cursor:pointer}
     </div>
 
     <!-- Por manos se puede cambiar de cuántas es la tanda con ella empezada:
-         se decide en la mesa muchas veces, y bajar a rearmarla para eso sobra. -->
+         se decide en la mesa muchas veces, y bajar a rearmarla para eso sobra.
+         Plegado: se toca el botón de arriba y se abre aquí. -->
     <div class="cuanta" id="cuanta" hidden>
-      <span class="cuanta-lbl">¿Hasta la cuánta?</span>
       <div class="stepper mini">
         <button data-mejor-paso="-2" id="cuanta-menos" aria-label="Menos dos">−</button>
         <span class="val" id="cuanta-val">5/3</span>
@@ -1089,8 +1120,9 @@ button{border:0;background:none;cursor:pointer}
           <div class="bar"><i style="width:0"></i></div>
           <div class="need"></div>
           <div class="acts">
-            <button class="add">+ Anotar</button>
             <button class="menos" hidden aria-label="Quitar una ganada">−1</button>
+            <button class="add">+ Anotar</button>
+            <button class="mas2" hidden aria-label="Apuntar dos ganadas">+2</button>
           </div>
         </div>
         <div class="entries"></div>
@@ -1106,8 +1138,9 @@ button{border:0;background:none;cursor:pointer}
           <div class="bar"><i style="width:0"></i></div>
           <div class="need"></div>
           <div class="acts">
-            <button class="add">+ Anotar</button>
             <button class="menos" hidden aria-label="Quitar una ganada">−1</button>
+            <button class="add">+ Anotar</button>
+            <button class="mas2" hidden aria-label="Apuntar dos ganadas">+2</button>
           </div>
         </div>
         <div class="entries"></div>
@@ -1617,6 +1650,7 @@ let jugFiltro = '', mesaFiltro = '', jugExtra = false;
 let mesaCustom = false;      // ni este: el acordeón de la mesa
 let sillaAbierta = -1;       // qué silla se está llenando, o -1
 let cfgJugAbierto = false;   // el acordeón de jugadores en Ajustes
+let cuantaAbierta = false;   // el de la tanda, en el tablero
 
 /* Una animación de entrada, una vez. No persiste ni se guarda en el estado: se
    pone, se deja correr y se quita, para que el siguiente repintado no la repita. */
@@ -2020,7 +2054,12 @@ function render() {
   $('#ord').textContent = porManos()
     ? cuantaTxt(mejorDe())
     : `${ordinal(gameNo())} mano`;
-  $('#cuanta').hidden = !porManos();
+  /* El acordeón de la tanda: el botón vive arriba y lo abre aquí. Cerrado al
+     salir de por manos, que es cuando deja de existir. */
+  if (!porManos()) cuantaAbierta = false;
+  $('#btn-cuanta').hidden = !porManos();
+  $('#btn-cuanta').setAttribute('aria-expanded', cuantaAbierta);
+  $('#cuanta').hidden = !porManos() || !cuantaAbierta;
   if (porManos()) pintarMejor('#cuanta-val', '#cuanta-menos', '#cuanta-mas');
   // cambiar de modo reparte fichas nuevas: solo tiene sentido antes de anotar
   const puedeModo = !S.rounds.length;
@@ -2065,14 +2104,17 @@ function render() {
       ? (S.over === i ? '¡Ganó!' : '')
       : `Faltan ${S.target - sc}`;
     $('.add', el).disabled = S.over >= 0;
-    $('.add', el).textContent = pm ? 'Ganó la mano' : '+ Anotar';
+    $('.add', el).textContent = pm ? '+1' : '+ Anotar';
 
-    /* Por manos el log solo dice la hora, y deshacer va al lado de ganar: la X
-       sobre cada fila no hace falta y ensuciaría una lista de horas. */
+    /* Por manos el log solo dice la hora, y quitar y sumar van a los lados de
+       ganar: la X sobre cada fila no hace falta y ensuciaría una lista de horas.
+       El +2 es para cuando se ganaron dos seguidas y solo se apuntó una. */
     const suyas = S.rounds.filter(r => r.t === i).length;
-    const menos = $('.menos', el);
-    menos.hidden = !pm;
+    const menos = $('.menos', el), mas2 = $('.mas2', el);
+    $('.acts', el).classList.toggle('pm', pm);
+    menos.hidden = mas2.hidden = !pm;
     menos.disabled = !suyas || S.over >= 0;
+    mas2.disabled = S.over >= 0;
 
     const list = $('.entries', el);
     list.innerHTML = pm ? manosHTML(i) : entriesHTML(i);
@@ -2142,7 +2184,7 @@ function manosHTML(team) {
   // color a la vez y se ve de un vistazo quién acaba de ganar
   const ultima = S.rounds.length - 1;
   return S.rounds.map((r, i) => ({ ...r, i })).filter(e => e.t === team).reverse()
-    .map(e => `<div class="erow${e.i === ultima ? ' ahora' : ''}">` +
+    .map(e => `<div class="erow soloh${e.i === ultima ? ' ahora' : ''}">` +
               `<span class="ewhen">${e.ts ? soloHora(e.ts) : ''}</span></div>`)
     .join('');
 }
@@ -3491,6 +3533,9 @@ $('#jug-extra-btn').addEventListener('click', () => {
 
 /* Los jugadores solo existen en Formal, y Formal necesita un nombre. Cada
    "no se puede" dice lo que falta para poder. */
+$('#btn-cuanta').addEventListener('click', () => {
+  cuantaAbierta = !cuantaAbierta; buzz(8); render();
+});
 $('#cuanta').addEventListener('click', e => {
   const b = e.target.closest('[data-mejor-paso]'); if (!b) return;
   pasoMejor(+b.dataset.mejorPaso);
@@ -3664,6 +3709,11 @@ $$('.team').forEach(el => {
   $('.add', el).addEventListener('click', () => {
     buzz(10);
     if (porManos()) ganaMano(i); else openPad(i);
+  });
+  /* Dos de una: si la segunda cierra la tanda, ganaMano se planta sola —
+     addRound no anota con la mano ya ganada. */
+  $('.mas2', el).addEventListener('click', () => {
+    buzz(10); ganaMano(i); ganaMano(i);
   });
   // deshacer: se quita la última que ganó ESE equipo, no la última de la mesa
   $('.menos', el).addEventListener('click', () => {
