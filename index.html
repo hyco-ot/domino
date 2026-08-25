@@ -92,12 +92,16 @@ button{border:0;background:none;cursor:pointer}
 @keyframes entraIzq  {from{opacity:0;transform:translateX(-14%)}}
 @keyframes entraDer  {from{opacity:0;transform:translateX(14%)}}
 @keyframes entraAbajo{from{opacity:0;transform:translateY(-9%)}}
+/* el fundido va sobre el elemento, no sobre sus hijos: lo que cambia al cambiar
+   de modo es una pieza suelta, no una pantalla entera */
+@keyframes aparece   {from{opacity:0}}
 .anim-izq   > *{animation:entraIzq   .26s cubic-bezier(.2,.8,.2,1) both}
 .anim-der   > *{animation:entraDer   .26s cubic-bezier(.2,.8,.2,1) both}
 .anim-abajo > *{animation:entraAbajo .24s cubic-bezier(.2,.8,.2,1) both}
+.anim-fade     {animation:aparece     .22s ease both}
 /* a quien pida menos movimiento, ninguno */
 @media (prefers-reduced-motion: reduce) {
-  .anim-izq > *, .anim-der > *, .anim-abajo > *{animation:none}
+  .anim-izq > *, .anim-der > *, .anim-abajo > *, .anim-fade{animation:none}
 }
 
 /* ---------- barra superior ---------- */
@@ -943,14 +947,6 @@ button{border:0;background:none;cursor:pointer}
             <button data-cuantos="4">4</button>
             <button data-cuantos="2">2</button>
           </div>
-          <div id="mesa-mejor" hidden>
-            <div class="cfg-lbl" style="margin-top:16px">¿Hasta la cuánta?</div>
-            <div class="stepper">
-              <button data-mejor-paso="-2" id="mesa-mejor-menos" aria-label="Menos dos">−</button>
-              <span class="val" id="mesa-mejor-val">5/3</span>
-              <button data-mejor-paso="2" id="mesa-mejor-mas" aria-label="Más dos">+</button>
-            </div>
-          </div>
           <div class="cfg-lbl" style="margin-top:16px">¿Y tú?</div>
           <div class="seg">
             <button data-yojuego="1">Juego</button>
@@ -969,6 +965,17 @@ button{border:0;background:none;cursor:pointer}
           <div class="silla abajo"  data-silla="0"></div>
         </div>
         <div class="mesa-cap" id="mesa-cap"></div>
+
+        <!-- Debajo de la mesa a propósito: aparece al elegir Por manos, y
+             puesto arriba empujaba la mesa justo cuando se acababa de tocar. -->
+        <div id="mesa-mejor" style="margin-top:22px" hidden>
+          <div class="cfg-lbl">¿Hasta la cuánta?</div>
+          <div class="stepper">
+            <button data-mejor-paso="-2" id="mesa-mejor-menos" aria-label="Menos dos">−</button>
+            <span class="val" id="mesa-mejor-val">5/3</span>
+            <button data-mejor-paso="2" id="mesa-mejor-mas" aria-label="Más dos">+</button>
+          </div>
+        </div>
 
         <!-- Plegado: armar la mesa es sentar gente, y los nombres y los colores
              casi siempre se quedan como están. -->
@@ -1613,9 +1620,10 @@ let cfgJugAbierto = false;   // el acordeón de jugadores en Ajustes
 
 /* Una animación de entrada, una vez. No persiste ni se guarda en el estado: se
    pone, se deja correr y se quita, para que el siguiente repintado no la repita. */
+const ANIMS = ['anim-izq', 'anim-der', 'anim-abajo', 'anim-fade'];
 function animar(sel, clase) {
   const el = $(sel); if (!el) return;
-  el.classList.remove('anim-izq', 'anim-der', 'anim-abajo');
+  el.classList.remove(...ANIMS);
   void el.offsetWidth;                 // reinicia la animación si ya estaba puesta
   el.classList.add(clase);
   setTimeout(() => el.classList.remove(clase), 400);
@@ -3398,14 +3406,19 @@ $('#mesa-custom-btn').addEventListener('click', () => {
 /* Cuántos son y si juegas: las dos cambian de quién es cada silla, así que las
    dos vacían la mesa por el mismo motivo. */
 $('#mesa-quien').addEventListener('click', e => {
-  const j = e.target.closest('[data-mejor-paso]');
-  if (j) { pasoMejor(+j.dataset.mejorPaso); return; }
   const c = e.target.closest('[data-cuantos]'), y = e.target.closest('[data-yojuego]');
   if (!c && !y) return;
   const m = S.mesa; if (!m) return;
   if (c) m.cuantos = +c.dataset.cuantos; else m.yoJuego = y.dataset.yojuego === '1';
   rehacerMesa(m);
   buzz(8); save(); renderMesa();
+});
+
+/* Escucha en su propio bloque y no en el de al lado: colgaba de #mesa-quien y
+   bajarlo debajo de la mesa lo dejó sordo, sin dar ningún error. */
+$('#mesa-mejor').addEventListener('click', e => {
+  const b = e.target.closest('[data-mejor-paso]'); if (!b) return;
+  pasoMejor(+b.dataset.mejorPaso);
 });
 
 // sentar a un conocido: entra en la silla que se abrió y el menú se cierra
@@ -3543,9 +3556,14 @@ $('#mesa-equipos').addEventListener('change', () => save());
    rápido que elegir de una lista, y la ficha ya dice cuál está puesto.
    Se guarda con el resto de la mesa. */
 function ponerModoMesa(k) {
-  const m = S.mesa; if (!m || !MODES[k]) return;
+  const m = S.mesa; if (!m || !MODES[k] || m.modo === k) return;   // tocar el que ya está no es un cambio
   m.modo = k;
   buzz(10); save(); renderMesa();
+  /* Solo se funde lo que el modo cambia: la ficha del centro, el pie que lo
+     nombra y el "¿hasta la cuánta?" que solo existe jugando por manos. */
+  animar('#mesa-ficha-svg', 'anim-fade');
+  animar('#mesa-cap', 'anim-fade');
+  if (mesaPorManos(m)) animar('#mesa-mejor', 'anim-fade');
 }
 // la ficha del centro sigue pasando al siguiente, ahora entre tres
 $('#mesa-ficha').addEventListener('click', () => {
