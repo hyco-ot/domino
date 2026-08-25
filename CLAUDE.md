@@ -100,6 +100,8 @@ The `mono` style is not just a palette: it disables functionality. The reactions
 
 `tileSVG(top, bottom)` builds a tile from `LAYOUT`, a 3×3 grid of pip positions per number (0–9). It's used in the mode cards, the badge, the capicúa chip, the entry log, and the winner screen. The pip count comes from `MODES[S.mode].pips`.
 
+**`MARCA_ICO` shares that tile's `100 200` viewBox on purpose.** Six places paint the mode glyph — the launcher cards, the board badge, the mesa's centre, the winner screen, the history rows — and every one of them sizes it by **height**. A square tally therefore came out twice as wide as a tile, which pushed "Por manos" out of line with the other two in the launcher's strip. A new mode glyph has to keep that box, or the misalignment reappears in all six at once. Tests should identify a tile by its `.t-face`, never by a path coordinate: those move whenever a glyph is redrawn, and one did.
+
 ### House rule: the pase corrido can't be what wins the hand — and the capicúa always fits
 
 A real domino rule, not a UI decision, and it applies to **the pase corrido only**. `bonusCap(score)` returns how many fit:

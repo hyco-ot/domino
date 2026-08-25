@@ -151,8 +151,8 @@ button{border:0;background:none;cursor:pointer}
 .modes.tira{display:flex;flex-direction:column;gap:11px}
 .tira .mode-card{display:grid;grid-template-columns:auto 1fr;align-items:center;
   column-gap:16px;padding:13px 18px;border-radius:18px;text-align:left}
-.tira .mode-card .tile{grid-row:1 / span 2;display:grid;place-items:center}
-.tira .mode-card svg{height:44px}
+.tira .mode-card .tile{grid-row:1 / span 2;width:26px;display:grid;place-items:center}
+.tira .mode-card svg{height:46px;width:auto}
 .tira .mode-name{align-self:end}
 .tira .mode-sub{align-self:start;margin-top:2px}
 .mode-card{background:var(--elev);border:1px solid var(--line);border-radius:22px;
@@ -1482,9 +1482,14 @@ const MODES    = { manos:{ label:'Por manos',  pips:0, target:0 },
                    dom:  { label:'Dominicano', pips:6, target:200 },
                    cub:  { label:'Cubano',     pips:9, target:300 } };
 // las rayas de la pizarra: el dibujo de por manos, donde iría la ficha
-const MARCA_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
-  'stroke-width="1.7" stroke-linecap="round">' +
-  '<path d="M5 5v14M9.5 5v14M14 5v14M18.5 5v14"/><path d="M3 18.5L20.5 5.5"/></svg>';
+/* Misma proporción que una ficha (1:2) a propósito: los seis sitios que pintan
+   el modo le dan alto, así que compartir caja es lo que hace que salgan del
+   mismo tamaño en todos sin repetir una medida en cada uno. Y unas rayas altas
+   es como se hacen en el papel de todos modos. */
+const MARCA_ICO = '<svg viewBox="0 0 100 200" fill="none" stroke="currentColor" ' +
+  'stroke-width="10" stroke-linecap="round">' +
+  '<path d="M20 26v148M42 26v148M64 26v148M86 26v148"/>' +
+  '<path d="M11 166L95 34"/></svg>';
 const modoSVG = k => k === 'manos' ? MARCA_ICO : tileSVG(MODES[k].pips, MODES[k].pips);
 const CHIP_PTS = 30;                   // pase corrido y doble, solo en el estilo "Chercha"
 const DEFAULT_NAMES = ['Nosotros', 'Ellos'];
@@ -3941,7 +3946,8 @@ setInterval(() => {
 $$('[data-mode]').forEach(card => {
   const k = card.dataset.mode, m = MODES[k];
   $('.tile', card).innerHTML = modoSVG(k);
-  $('.mode-sub', card).textContent = k === 'manos' ? 'Sin puntos' : `${m.target} pts`;
+  $('.mode-sub', card).textContent = k === 'manos'
+    ? 'Sin puntos · solo quién gana' : `Doble ${m.pips} · ${m.target} pts`;
 });
 
 /* ============================================================
