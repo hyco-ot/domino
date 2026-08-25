@@ -12,7 +12,7 @@
    le manda SKIP_WAITING, que es lo que dispara el botón "Actualizar". Así nunca
    se mezcla una página vieja ya cargada con archivos de la versión nueva. */
 
-const VERSION = '2.18';               // +1 por cada cambio suelto
+const VERSION = '2.43';               // +1 por cada cambio suelto
 const CACHE   = `tranque-${VERSION}`; // caché propia por versión
 const ASSETS = [
   './',
@@ -23,9 +23,22 @@ const ASSETS = [
   './icon-maskable-512.png'
 ];
 
+/* addAll() habría valido, pero se sirve de la caché HTTP del navegador: con un
+   index.html todavía fresco de la versión anterior, este worker se guardaría el
+   HTML VIEJO en su propia caché y serviría una mezcla — el número de versión de
+   uno y la pantalla del otro. Con cache:'reload' cada archivo viene de la red y
+   de paso refresca la caché HTTP.
+
+   Si alguno falla, no se guarda ninguno: la instalación entera se cae y el
+   worker viejo sigue mandando, que es mejor que una copia a medias. */
 self.addEventListener('install', e => {
   // A propósito sin skipWaiting: el SW nuevo espera a que el usuario acepte.
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+  e.waitUntil(caches.open(CACHE).then(c => Promise.all(
+    ASSETS.map(u => fetch(u, { cache: 'reload' }).then(r => {
+      if (!r.ok) throw new Error('no se pudo bajar ' + u);
+      return c.put(u, r);
+    }))
+  )));
 });
 
 self.addEventListener('activate', e => {

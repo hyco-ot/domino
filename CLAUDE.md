@@ -153,6 +153,27 @@ Two consequences worth keeping:
 - **Colours belong to the people, not to the app.** `S.colores` remembers the accent pair per identity, so sitting down with the same four restores their colours, and a history row keeps the colours it was played with. History rows therefore set colour **inline** from `colorMano(r, t)`, never via the `.t0`/`.t1` classes, which point at the live `--a`/`--b` and would repaint three-day-old hands.
 - **Don't invent an identity for old data.** The Formal/Informal label in the history (`tipoMano(r)`) renders nothing when `r.ident` is missing, because that distinction didn't exist when those hands were played.
 
+### Three ways to play, two of which share a table
+
+`S.tipo` is `'formal'` (UI: **Anotar con jugadores**), `'manos'` (**Jugar por manos**) or `'informal'` (**Blitz**). The internal keys never changed — they are in `S.tipo`, in every `S.ident`, and in every stored hand, so renaming them would break history. `TIPO_TXT` is the single place the user-facing words live.
+
+`conMesa()` is `formal || manos`: those two share the table, the players, the colours and the identity. **Every check about "does this game have players" must go through it.** Two bugs shipped from checking `S.tipo === 'formal'` directly — the Jugadores button painted itself enabled and then refused, and picking a saved group dropped you out of Por manos.
+
+**Por manos is not a special case — it's the same game with different units.** A tanda at "mejor de X" is a match where each hand is worth 1 point and `S.target` is `paraGanar()` (half of X, rounded up). Everything else falls out for free: the score, "Faltan 2", the bar, one history row per tanda with `4 — 2` in it, the games tally, and lisa meaning *won without conceding a single hand*. `reg.manos` and `reg.mejor` are stamped on the record so the history knows what the numbers mean. An earlier attempt kept hands outside the machinery and produced one history row per hand; don't go back there.
+
+Two consequences to keep in mind:
+
+- `setTarget()` clamps to `TARGET_MIN`/`TARGET_MAX`, which are **points**. Under `porManos()` the target is hands (2–8), so the clamp is skipped — otherwise "mejor de 3" asked for 2 and got 50, and the tanda never ended.
+- The score renders as tally marks (`marcasHTML`), grouped in fives with the fifth crossing the other four, stacked vertically. `.marcas` carries a `min-height` so the board doesn't jump between zero and one.
+
+**Blitz forces `BLITZ_ACCENTS` (azul/rojo) on entry**, overriding whatever `nuevaTanda` remembered. Colours belong to people, and Blitz never asks who is playing — so there they belong to nobody. It is also the only mode with no way to change them, since the colour picker lives on the Jugadores screen.
+
+### The table asks who and how many
+
+`S.mesa` gained `cuantos` (4 or 2) and `yoJuego`. Both are read through `mesaCuantos()` / `yoJuego()`, which default to 4 and true — **a mesa stored before this has neither field, and `load()`'s shallow merge cannot fill a nested record**. Changing either calls `rehacerMesa()`, which empties the table and re-seats only the scorekeeper, and only if they play: the seats stop meaning the same thing, so what was in them no longer holds.
+
+For two players the seats are **0 and 1**, not 0 and 2 — those two are partners. Seat 1 is moved to the top of the square by CSS (`.mesa4.de2`), which is where an opponent sits.
+
 ### Two-step launcher and the table screen
 
 `#sc-mode` has two steps driven by `S.tipo` (`null` → ask Informal/Formal → then the mode), not by a loose variable, so a reload mid-way lands somewhere coherent. `S.tipo` returns to `null` on idle reset.
@@ -204,6 +225,7 @@ Checks for a new version run on visibility change and every 15 minutes while the
 
 Two invariants to preserve:
 
+- **`install` fetches every asset with `cache: 'reload'`.** `cache.addAll()` would be shorter, but it goes through the browser's HTTP cache: with a still-fresh `index.html` from the previous release, a new worker cached the **old** HTML under its own version. The result was a phone reporting the new version while showing the old app — `sw.js` itself escapes because it is registered with `updateViaCache: 'none'`, which is exactly why the version display looked right. Only a reinstall cleared it. This shipped, and `S.avisoCache` (esquema 4) offers the reinstall once to anyone who might still be stuck.
 - **Caches are per-version** (`tranque-${VERSION}`), and `fetch` is cache-first, not stale-while-revalidate. Together these mean everything a given worker serves comes from one version. Reintroducing background revalidation would let a new `index.html` slip into an old version's cache and re-create the mixed-version bug this design exists to prevent.
 - **Never change the `localStorage` key** (`domino.v2`) in a release — an update would wipe everyone's history.
 

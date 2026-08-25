@@ -108,6 +108,7 @@ button{border:0;background:none;cursor:pointer}
 .kicker{text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:var(--dim);
   text-align:center;font-weight:600}
 .modes{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:14px}
+.mode-card.ancha{grid-column:1 / -1}
 .mode-card{background:var(--elev);border:1px solid var(--line);border-radius:22px;
   padding:24px 10px 18px;display:flex;flex-direction:column;align-items:center;gap:14px;
   box-shadow:var(--shadow);transition:transform .12s ease}
@@ -158,8 +159,14 @@ button{border:0;background:none;cursor:pointer}
 /* ---------- la mesa, dibujada como mesa ----------
    Quien anota va siempre abajo, su compañero enfrente y los contrarios a los
    lados. Al ser siempre igual, nadie necesita que le numeren los asientos. */
+#mesa-quien{margin-bottom:22px}
 .mesa4{display:grid;grid-template-columns:1fr 1.15fr 1fr;grid-template-rows:auto 1fr auto;
   gap:9px;align-items:center;max-width:330px;margin:0 auto}
+/* Uno contra uno: el contrario (silla 1) se pone enfrente, que es donde se
+   sienta, y las otras dos sillas no existen. */
+.mesa4.de2 .izq{grid-area:1/2/2/3}
+.mesa4.de2 .arriba,
+.mesa4.de2 .der{display:none}
 .mesa4 .arriba {grid-area:1/2/2/3}
 .mesa4 .izq    {grid-area:2/1/3/2}
 .mesa4 .tablero{grid-area:2/2/3/3}
@@ -205,10 +212,13 @@ button{border:0;background:none;cursor:pointer}
   color:var(--txt);outline:none}
 .eqrow input:focus{border-bottom-color:var(--as,var(--ok))}
 /* jugadores ya conocidos, para elegir en vez de teclear */
-.jchips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:16px 0 0}
+.jchips{display:flex;flex-wrap:wrap;align-items:center;gap:7px;
+  justify-content:center;padding:16px 0 0}
 .jchips:empty{display:none}
-.jchips button{padding:9px 14px;border-radius:99px;border:1px solid var(--line);
-  font-size:14px;font-weight:600;color:var(--dim)}
+/* line-height explícito: sin él la caja se ajusta al alto por defecto de la
+   fuente y a "Martín" o "Jorge" se les come la tilde o la cola de la g. */
+.jchips button{padding:8px 12px;border-radius:99px;border:1px solid var(--line);
+  font-size:13px;font-weight:600;color:var(--dim);line-height:1.35;max-width:100%}
 .jchips button:active{background:var(--sunk)}
 .jchips[hidden]{display:none}
 
@@ -231,15 +241,15 @@ button{border:0;background:none;cursor:pointer}
 /* Cada jugador puesto es una pastilla del color de su equipo. Tocarla lo quita:
    con la mesa llena es la única manera de hacer sitio. */
 .jug-p{display:flex;align-items:center;justify-content:space-between;gap:6px;
-  min-width:0;padding:13px 15px;border-radius:99px;
-  border:1px solid var(--as);color:var(--as);font-size:15.5px;font-weight:700}
+  min-width:0;padding:11px 13px;border-radius:99px;line-height:1.3;
+  border:1px solid var(--as);color:var(--as);font-size:14.5px;font-weight:700}
 .jug-p span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .jug-p svg{width:13px;height:13px;flex:0 0 auto;opacity:.65;
   fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
 .jug-p:active{background:var(--sunk)}
 /* silla libre; la marcada es la que recibe al siguiente que se toque abajo */
-.jug-libre{padding:13px 15px;border-radius:99px;border:1px dashed var(--line);
-  color:var(--dim);font-size:14px;font-weight:600}
+.jug-libre{padding:11px 13px;border-radius:99px;border:1px dashed var(--line);
+  color:var(--dim);font-size:13.5px;font-weight:600;line-height:1.3}
 .jug-libre.arm{border-style:solid;border-color:var(--ok);color:var(--ok)}
 .jug-libre:active{background:var(--sunk)}
 .jug-nuevo{display:flex;align-items:center;gap:8px}
@@ -247,6 +257,15 @@ button{border:0;background:none;cursor:pointer}
 .jug-nuevo input{flex:1;min-width:0;padding:12px 14px;border-radius:14px;
   border:1px solid var(--line);background:var(--elev);color:var(--txt);font-size:15px}
 .jug-nuevo .linky{width:auto;flex:0 0 auto;margin:0}
+/* acordeón: una fila que se toca para desplegar lo de dentro */
+.acord{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  width:100%;padding:17px 2px;border-top:1px solid var(--line);
+  font-size:15.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--ok)}
+.acord .chev{width:22px;height:22px;flex:0 0 auto;transition:transform .18s ease;
+  fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.acord[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.acord:active{opacity:.6}
 .eqrow{display:flex;align-items:center;gap:10px;padding:6px 0}
 .eqrow > i{width:11px;height:11px;flex:0 0 auto;border-radius:50%;background:var(--as)}
 
@@ -267,6 +286,21 @@ button{border:0;background:none;cursor:pointer}
 #sc-game .badge{margin-right:auto}
 
 /* contador de partida de la sesión */
+/* Tira de números que se arrastra de lado: con siete opciones, una fila de
+   botones fijos las dejaría en nada de ancho cada una. */
+.tira{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;
+  padding:10px 2px;scroll-snap-type:x proximity}
+.tira::-webkit-scrollbar{display:none}
+.tira[hidden]{display:none}
+.tira button{flex:0 0 auto;scroll-snap-align:center;min-width:52px;padding:11px 0;
+  border-radius:14px;border:1px solid var(--line);color:var(--dim);
+  font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+.tira button[aria-checked="true"]{border-color:var(--ok);color:var(--ok);
+  box-shadow:inset 0 0 0 1px var(--ok)}
+.tira button:active{background:var(--sunk)}
+.cuanta{padding:0 20px 4px}
+.cuanta[hidden]{display:none}
+.cuanta .linky{margin:0}
 .gamebar{display:flex;align-items:center;gap:12px;padding:2px 20px 8px}
 .gamebar .rule{flex:1;height:1px;background:var(--line)}
 .gamebar .ord{font-size:11px;font-weight:700;letter-spacing:.22em;
@@ -317,6 +351,13 @@ button{border:0;background:none;cursor:pointer}
 
 /* El equipo que va ganando muestra su puntuación un 5% más grande. Con el 3%
    de antes casi no se notaba de lejos, que es como se mira desde la mesa. */
+/* El marcador a rayas ocupa el sitio del número, así que hereda su color y se
+   apila hacia abajo. El min-height evita que el tablero pegue un salto al pasar
+   de cero a una raya. */
+.marcas{display:flex;flex-direction:column;align-items:center;gap:7px;
+  min-height:calc(clamp(52px,19vw,108px) * .60)}
+.marca5{display:block;height:calc(clamp(52px,19vw,108px) * .60);width:auto;
+  fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
 .score{--k:1;
   font-size:calc(clamp(52px,19vw,108px) * var(--k));
   font-weight:800;line-height:.88;font-variant-numeric:tabular-nums;
@@ -327,16 +368,27 @@ button{border:0;background:none;cursor:pointer}
 .bar i{display:block;height:100%;background:var(--tc);border-radius:99px;
   transition:width .3s cubic-bezier(.2,.8,.2,1)}
 .need{font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums;height:15px}
-.add{margin-top:6px;padding:12px 24px;border-radius:14px;background:var(--tc);
+.add{padding:12px 24px;border-radius:14px;background:var(--tc);
   color:var(--on-solid);font-weight:700;font-size:15px;transition:transform .1s ease}
 .add:active{transform:scale(.94)}
 .add:disabled{opacity:.35}
+/* Por manos, deshacer va al lado de ganar: es el mismo gesto al reves y no
+   tiene sentido buscarlo en otra parte de la pantalla. */
+.acts{display:flex;align-items:center;gap:8px;margin-top:6px}
+.menos{width:40px;height:40px;flex:0 0 auto;border-radius:13px;
+  border:1px solid var(--line);color:var(--dim);font-size:15px;font-weight:700}
+.menos[hidden]{display:none}
+.menos:disabled{opacity:.3}
+.menos:active{background:var(--sunk)}
 
 /* ---------- puntos anotados de cada equipo (el más nuevo arriba) ---------- */
 .entries{flex:1;min-height:0;width:100%;overflow-y:auto;scrollbar-width:none;
   border-top:1px solid var(--line);padding:7px 0 12px;
   display:flex;flex-direction:column;-webkit-overflow-scrolling:touch}
 .entries::-webkit-scrollbar{display:none}
+/* display propio: sin esta regla, hidden no la escondería */
+.entries[hidden]{display:none}
+.bar[hidden]{display:none}
 /* Tres celdas: la hora, la cifra con los iconos de sus atajos, y la X. Los dos
    equipos las llevan en el mismo orden a propósito: espejar la columna de la
    derecha ponía las dos X juntas en el medio y se leía peor que repetir el
@@ -566,7 +618,7 @@ button{border:0;background:none;cursor:pointer}
 .menu .mi i{font-style:normal;font-size:11.5px;font-weight:500;color:var(--dim);line-height:1.25}
 .menu .mi i:empty{display:none}
 /* icono entre el ✓ y el texto; en gris para que mande la palabra */
-.menu button svg{width:18px;height:18px;flex:0 0 auto;color:var(--dim);
+.menu button svg{width:20px;height:20px;flex:0 0 auto;color:var(--dim);
   fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .menu button.off{opacity:.45}
 .menu button.off .mi i{color:var(--danger)}
@@ -775,7 +827,12 @@ button{border:0;background:none;cursor:pointer}
             <span class="mode-name">Anotar con jugadores</span>
             <span class="mode-sub"></span>
           </button>
-          <button class="mode-card" data-tipo="informal">
+          <button class="mode-card" data-tipo="manos">
+            <span class="tipo-ico"><svg viewBox="0 0 24 24"><path d="M5 5v14M9.5 5v14M14 5v14M18.5 5v14"/><path d="M3 18.5L20.5 5.5"/></svg></span>
+            <span class="mode-name">Jugar por manos</span>
+            <span class="mode-sub">Sin puntos, solo quién gana</span>
+          </button>
+          <button class="mode-card ancha" data-tipo="informal">
             <span class="tipo-ico"><svg viewBox="0 0 24 24"><path d="M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12z"/></svg></span>
             <span class="mode-name">Blitz</span>
             <span class="mode-sub">Sin preguntar quién</span>
@@ -834,6 +891,25 @@ button{border:0;background:none;cursor:pointer}
       </div>
 
       <div id="mesa-armar">
+        <div id="mesa-quien">
+          <div class="cfg-lbl">¿Cuántos?</div>
+          <div class="seg">
+            <button data-cuantos="4">4</button>
+            <button data-cuantos="2">2</button>
+          </div>
+          <div id="mesa-mejor" hidden>
+            <div class="cfg-lbl" style="margin-top:16px">¿Hasta la cuánta?</div>
+            <div class="tira" id="mesa-mejor-tira"></div>
+          </div>
+          <div class="cfg-lbl" style="margin-top:16px">¿Y tú?</div>
+          <div class="seg">
+            <button data-yojuego="1">Juego</button>
+            <button data-yojuego="0">Solo anoto</button>
+          </div>
+          <p class="cfg-hint">Al cambiar cualquiera de las dos, la mesa se vacía:
+            las sillas dejan de ser las mismas.</p>
+        </div>
+
         <div class="mesa4" id="mesa4">
           <div class="silla arriba" data-silla="2"></div>
           <div class="silla izq"    data-silla="1"></div>
@@ -893,6 +969,26 @@ button{border:0;background:none;cursor:pointer}
                  placeholder="Buscar o añadir">
           <button class="linky" id="jug-add">Sentar</button>
         </div>
+        <p class="cfg-hint">Aquí solo se sienta y se guarda gente. Para borrar a
+          alguien del todo: Ajustes › Jugadores y grupos. Así nadie desaparece
+          por un toque de más.</p>
+      </div>
+
+      <!-- Plegado a propósito: se toca una vez cada muchas noches, y abierto
+           empujaría la lista de gente fuera de la pantalla. -->
+      <div>
+        <button class="acord" id="jug-extra-btn" aria-expanded="false">
+          <span>Extra configuración</span>
+          <svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div id="jug-extra" hidden>
+          <div class="cfg-lbl" style="margin-top:18px">Nombres de los equipos</div>
+          <div id="jug-nombres"></div>
+          <div class="cfg-lbl" style="margin-top:22px">Colores de los equipos</div>
+          <div id="jug-accents"></div>
+          <p class="cfg-hint">Cada color trae su tono para claro y para oscuro, así que
+            siempre se lee bien sobre el fondo. Valen para los dos estilos.</p>
+        </div>
       </div>
     </div>
   </section>
@@ -918,6 +1014,13 @@ button{border:0;background:none;cursor:pointer}
       <span class="rule"></span>
     </div>
 
+    <!-- Por manos se puede cambiar de cuántas es la tanda con ella empezada:
+         se decide en la mesa muchas veces, y bajar a rearmarla para eso sobra. -->
+    <div class="cuanta" id="cuanta" hidden>
+      <button class="linky" id="cuanta-btn"></button>
+      <div class="tira" id="cuanta-tira" hidden></div>
+    </div>
+
     <div class="board" id="board">
       <div class="team" data-team="0">
         <div class="team-top">
@@ -927,7 +1030,10 @@ button{border:0;background:none;cursor:pointer}
           <div class="score">0</div>
           <div class="bar"><i style="width:0"></i></div>
           <div class="need"></div>
-          <button class="add">+ Anotar</button>
+          <div class="acts">
+            <button class="add">+ Anotar</button>
+            <button class="menos" hidden aria-label="Quitar una ganada">−1</button>
+          </div>
         </div>
         <div class="entries"></div>
         <div class="fx"></div>
@@ -941,7 +1047,10 @@ button{border:0;background:none;cursor:pointer}
           <div class="score">0</div>
           <div class="bar"><i style="width:0"></i></div>
           <div class="need"></div>
-          <button class="add">+ Anotar</button>
+          <div class="acts">
+            <button class="add">+ Anotar</button>
+            <button class="menos" hidden aria-label="Quitar una ganada">−1</button>
+          </div>
         </div>
         <div class="entries"></div>
         <div class="fx"></div>
@@ -1016,20 +1125,6 @@ button{border:0;background:none;cursor:pointer}
       </div>
 
       <div>
-        <div class="cfg-lbl">Tema</div>
-        <div class="seg">
-          <button data-set-theme="light">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2M12 19.4v2M21.4 12h-2M4.6 12h-2M18.6 5.4l-1.4 1.4M6.8 17.2l-1.4 1.4M18.6 18.6l-1.4-1.4M6.8 6.8L5.4 5.4"/></svg>
-            Claro
-          </button>
-          <button data-set-theme="dark">
-            <svg viewBox="0 0 24 24"><path d="M20.5 14.5A8.6 8.6 0 0 1 9.5 3.5a8.6 8.6 0 1 0 11 11z"/></svg>
-            Oscuro
-          </button>
-        </div>
-      </div>
-
-      <div>
         <div class="cfg-lbl">Hora</div>
         <div class="seg">
           <button data-hora="24">
@@ -1044,34 +1139,8 @@ button{border:0;background:none;cursor:pointer}
         <p class="cfg-hint">Vale para la hora de cada anotación y para la del historial.</p>
       </div>
 
-      <div id="cfg-sec-nombres">
-        <div class="cfg-lbl">Nombres de los equipos</div>
-        <div id="cfg-nombres"></div>
-      </div>
-
       <div>
-        <div class="cfg-lbl">Colores de los equipos</div>
-        <div id="cfg-accents"></div>
-        <p class="cfg-hint">Cada color trae su tono para claro y para oscuro, así que
-          siempre se lee bien sobre el fondo. Valen para los dos estilos.</p>
-      </div>
-
-      <div>
-        <div class="cfg-lbl">Actualizaciones</div>
-        <button class="upd"></button>
-        <p class="cfg-hint">La app se actualiza sola: cuando hay versión nueva entra
-          en el primer momento en que no estés anotando. Este botón es por si quieres
-          comprobarlo o adelantarlo. Los puntos, los nombres y el historial no se tocan.</p>
-        <button class="install" hidden>
-          <svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-          <span class="txt">Instálame para mejor experiencia<i></i></span>
-        </button>
-        <button class="linky" id="btn-hard">¿Sigue sin actualizar? Reinstalar</button>
-        <p class="cfg-hint" id="upd-ver"></p>
-      </div>
-
-      <div>
-        <div class="cfg-lbl">Quién anota</div>
+        <div class="cfg-lbl">Cambiar nombre de anotador</div>
         <div class="eqrow" style="--as:var(--ok)">
           <i></i>
           <input id="cfg-anotador" maxlength="18" spellcheck="false" autocomplete="off">
@@ -1089,12 +1158,26 @@ button{border:0;background:none;cursor:pointer}
       <div id="cfg-sin-nombre" hidden>
         <div class="cfg-lbl">Con tu nombre además puedes…</div>
         <div class="stat-card">
-          <div class="stat-row"><span class="k">Jugar Formal</span></div>
+          <div class="stat-row"><span class="k">Anotar con jugadores</span></div>
           <div class="stat-row"><span class="k">Guardar jugadores y juegos comunes</span></div>
           <div class="stat-row"><span class="k">Ponerle nombre a los equipos</span></div>
         </div>
         <p class="cfg-hint">Anotar, el historial, los puntos, el tamaño y las
           actualizaciones funcionan igual sin nombre.</p>
+      </div>
+
+      <div>
+        <div class="cfg-lbl">Actualizaciones</div>
+        <button class="upd"></button>
+        <p class="cfg-hint">La app se actualiza sola: cuando hay versión nueva entra
+          en el primer momento en que no estés anotando. Este botón es por si quieres
+          comprobarlo o adelantarlo. Los puntos, los nombres y el historial no se tocan.</p>
+        <button class="install" hidden>
+          <svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          <span class="txt">Instálame para mejor experiencia<i></i></span>
+        </button>
+        <button class="linky" id="btn-hard">¿Sigue sin actualizar? Reinstalar</button>
+        <p class="cfg-hint" id="upd-ver"></p>
       </div>
 
       <!-- Se marca lo que se quiere borrar, en vez de un botón que lo tira todo.
@@ -1139,6 +1222,13 @@ button{border:0;background:none;cursor:pointer}
   <button data-set-style="mono">
     <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
     Clásico<span class="tick">✓</span></button>
+  <div class="lbl">Tema</div>
+  <button data-set-theme="light">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2M12 19.4v2M21.4 12h-2M4.6 12h-2M18.6 5.4l-1.4 1.4M6.8 17.2l-1.4 1.4M18.6 18.6l-1.4-1.4M6.8 6.8L5.4 5.4"/></svg>
+    Claro<span class="tick">✓</span></button>
+  <button data-set-theme="dark">
+    <svg viewBox="0 0 24 24"><path d="M20.5 14.5A8.6 8.6 0 0 1 9.5 3.5a8.6 8.6 0 1 0 11 11z"/></svg>
+    Oscuro<span class="tick">✓</span></button>
   <div class="sep"></div>
   <button data-act="new">
     <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
@@ -1256,6 +1346,8 @@ const ACCENTS = {
   rojo:   { name:'Rojo',       light:'#a8302e', dark:'#f0827f' }
 };
 const DEFAULT_ACCENTS = ['azul', 'terra'];
+// Blitz va siempre con estos: sin jugadores, el color no identifica a nadie
+const BLITZ_ACCENTS = ['azul', 'rojo'];
 
 /* ---- jugadores y grupos ----
    Topes de verdad, no de adorno: save() se traga los errores de cuota, así que
@@ -1349,7 +1441,9 @@ const blank = () => ({
      historial le colgaba a los de ahora las victorias de los de antes. */
   ident:     '',
   colores:   [],     // color de cada tanda: [{ ident, accents }], la más reciente primero
-  esquema:   3       // versión del estado guardado; la usa load() para migrar
+  mejorDe: 5,        // "Mejor de X" en Por manos: 3, 5 o 7
+  avisoCache: 1,     // ¿ya se le avisó de reinstalar? 1 en una instalación nueva
+  esquema:   4       // versión del estado guardado; la usa load() para migrar
 });
 
 let S = load();
@@ -1374,7 +1468,11 @@ function load() {
        instalaciones anteriores a la 2.00 no lo traen y cuentan como 1. */
     const antes = +raw.esquema || 1;
     if (antes < 3 && s.zoom === 1) s.zoom = ZOOM_DEF;
-    s.esquema = 3;
+    /* Quien ya tenía la app instalada puede haberse quedado con una copia a
+       medias por lo de addAll: se le ofrece reinstalar una vez. En una
+       instalación nueva no hay nada que avisar, y por eso blank() dice 1. */
+    if (antes < 4) s.avisoCache = 0;
+    s.esquema = 4;
     return s;
   } catch { return blank(); }
 }
@@ -1411,7 +1509,8 @@ const porNombre = (a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity
 /* Buscar por lo tecleado, sin distinguir mayusculas ni tildes: nadie escribe
    "Martín" con tilde cuando esta buscando con el pulgar. No persiste: es el
    estado de un campo de texto. */
-let jugFiltro = '', mesaFiltro = '';
+let jugFiltro = '', mesaFiltro = '', jugExtra = false;
+let cuantaAbierta = false;   // no persiste: es un desplegable del tablero
 const pelado = t => (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const casaNombre = (nombre, filtro) => !filtro || pelado(nombre).includes(pelado(filtro));
 
@@ -1538,7 +1637,7 @@ function nuevaTanda(ident) {
 }
 // la identidad que le toca a lo que se esté jugando ahora mismo
 const identAhora = () =>
-  (S.tipo === 'formal' && S.mesa && grupoCompleto(S.mesa.ids))
+  (conMesa() && S.mesa && grupoCompleto(S.mesa.ids))
     ? identFormal(S.mesa.ids) : identInformal();
 
 /* El aviso no se va solo: se queda hasta que se toque la pantalla. Antes duraba
@@ -1594,6 +1693,8 @@ function react(team, text) {
 }
 
 // lisa: cualquiera de los dos gana dejando al otro en cero
+/* Por puntos, ganar dejando al otro sin anotar. Por manos sale lo mismo sin
+   tocar nada: ganar la tanda sin dejarle ganar una sola mano. */
 const isLisa = () => S.over >= 0 && S.scores[1 - S.over] === 0;
 
 /* Dos maneras de cantarla, mitad y mitad. El sorteo se hace UNA vez por mano y
@@ -1690,6 +1791,7 @@ function render() {
   });
   $('meta[name=theme-color]').content = BAR_COLOR[S.theme];
   $$('[data-set-style]').forEach(b => b.setAttribute('aria-checked', b.dataset.setStyle === S.style));
+  $$('[data-set-theme]').forEach(b => b.setAttribute('aria-checked', b.dataset.setTheme === S.theme));
 
   /* La puerta del registro va ANTES de la matriz de pantallas, no como un
      `view` más: tiene que tapar hasta Ajustes, y un `view` no puede hacer eso. */
@@ -1706,11 +1808,12 @@ function render() {
   if (!inGame && view === 'stats') view = 'game';     // sin partida no hay historial
   if (inGame && view === 'mesa')   view = 'game';     // no se rearma a media partida
   // los jugadores de la mesa solo existen en Formal, y solo con partida abierta
-  if (view === 'jugadores' && !(inGame && S.tipo === 'formal' && S.mesa)) view = 'game';
+  if (view === 'jugadores' && !(inGame && conMesa() && S.mesa)) view = 'game';
   // salir de la pantalla tira el borrador: lo que no se guardó no cuenta
   if (view !== 'jugadores') {
     jugBorrador = null; jugSilla = -1;
     jugFiltro = ''; $('#jug-nombre').value = '';
+    jugExtra = false;                      // vuelve plegado, como se encontro
   }
   if (view !== 'mesa') { mesaFiltro = ''; $('#mesa-alta-nombre').value = ''; }
   $('#sc-mode').classList.toggle('on',   !inGame && view === 'game');
@@ -1733,7 +1836,16 @@ function render() {
   $('#badge-tile').innerHTML = tileSVG(pips, pips);
   // el nombre del modo se va de la vista, pero sigue ahí para lectores de pantalla
   $('#badge').setAttribute('aria-label', `Tranque, modo ${MODES[S.mode].label}`);
-  $('#ord').textContent = `${ordinal(gameNo())} mano`;
+  $('#ord').textContent = porManos()
+    ? `Mejor de ${mejorDe()}`
+    : `${ordinal(gameNo())} mano`;
+  $('#cuanta').hidden = !porManos();
+  if (porManos()) {
+    $('#cuanta-btn').textContent = cuantaAbierta
+      ? 'Listo' : `¿Hasta la cuánta? · Mejor de ${mejorDe()}`;
+    $('#cuanta-tira').hidden = !cuantaAbierta;
+    if (cuantaAbierta) $('#cuanta-tira').innerHTML = tiraMejorHTML();
+  }
   // cambiar de modo reparte fichas nuevas: solo tiene sentido antes de anotar
   const puedeModo = !S.rounds.length;
   $('#mi-mode').classList.toggle('off', !puedeModo);
@@ -1742,7 +1854,7 @@ function render() {
   /* El botón se queda a la vista siempre, apagado cuando no se puede usar: al
      tocarlo dice por qué. Escondido no se entendía nada — y encima no llegaba a
      esconderse, porque .icon-btn trae su propio display y le gana a [hidden]. */
-  $('#btn-jug').classList.toggle('off', !(S.tipo === 'formal' && S.mesa));
+  $('#btn-jug').classList.toggle('off', !(conMesa() && S.mesa));
 
   const [s0, s1] = S.scores;
   const leader = s0 === s1 ? -1 : (s0 > s1 ? 0 : 1);
@@ -1754,7 +1866,7 @@ function render() {
        editarlos: el nombre sale de quién está sentado, y cambiarlo aquí sería
        contradecir la mesa. En Informal vuelve el campo con Nosotros/Ellos. */
     const nameEl = $('.name', el), pila = $('.names2', el);
-    const suyos = (S.tipo === 'formal' && S.mesa) ? idsEquipo(i, S.mesa.ids) : [];
+    const suyos = (conMesa() && S.mesa) ? idsEquipo(i, S.mesa.ids) : [];
     nameEl.hidden = suyos.length > 0;
     pila.hidden   = suyos.length === 0;
     if (suyos.length) {
@@ -1763,17 +1875,30 @@ function render() {
       nameEl.value = S.names[i];
     }
     el.classList.toggle('lead', i === leader);
+    /* Por manos el marcador ya son las manos de esta tanda y el tope las que
+       hay que ganar, así que el número, la barra y "faltan" salen solos. Lo
+       único que sobra es la lista de anotaciones: todas dirían "1". */
+    const pm = porManos();
     $('.games', el).innerHTML = S.games[i]
       ? `<b>${S.games[i]}</b> ${S.games[i] === 1 ? 'ganada' : 'ganadas'}` : '';
-    $('.score', el).textContent = sc;
+    if (pm) $('.score', el).innerHTML = marcasHTML(sc);
+    else    $('.score', el).textContent = sc;
     $('.bar i', el).style.width = Math.min(100, sc / S.target * 100) + '%';
     $('.need', el).textContent = S.over >= 0
       ? (S.over === i ? '¡Ganó!' : '')
       : `Faltan ${S.target - sc}`;
     $('.add', el).disabled = S.over >= 0;
+    $('.add', el).textContent = pm ? 'Ganó la mano' : '+ Anotar';
+
+    /* Por manos el log solo dice la hora, y deshacer va al lado de ganar: la X
+       sobre cada fila no hace falta y ensuciaría una lista de horas. */
+    const suyas = S.rounds.filter(r => r.t === i).length;
+    const menos = $('.menos', el);
+    menos.hidden = !pm;
+    menos.disabled = !suyas || S.over >= 0;
 
     const list = $('.entries', el);
-    list.innerHTML = entriesHTML(i);
+    list.innerHTML = pm ? manosHTML(i) : entriesHTML(i);
     list.scrollTop = 0;                 // lo recién anotado va arriba del todo
   });
 
@@ -1789,7 +1914,9 @@ function render() {
   if (showWin) {
     const w = S.over;
     $('#win-tile').innerHTML = tileSVG(pips, pips);
-    $('#win-cap').textContent = `${ordinal(gameNo())} mano`;
+    $('#win-cap').textContent = porManos()
+      ? `Mejor de ${mejorDe()}`
+      : `${ordinal(gameNo())} mano`;
     const lisa = S.style === 'chercha' && isLisa();
     $('#win-lisa').hidden = !lisa;
     if (lisa) $('#win-lisa').textContent = cantoLisa();
@@ -1818,6 +1945,14 @@ function chipsHTML() {
       <span class="chip-lbl">Capicúa</span>
       <span class="chip-val">+${CHIP_PTS}</span>
     </button>`;
+}
+
+/* Por manos cada anotación vale 1, así que la cifra no dice nada: queda la hora
+   en que se ganó, que es lo único que aporta. Quitar va en el botón de al lado. */
+function manosHTML(team) {
+  return S.rounds.map((r, i) => ({ ...r, i })).filter(e => e.t === team).reverse()
+    .map(e => `<div class="erow"><span class="ewhen">${e.ts ? soloHora(e.ts) : ''}</span></div>`)
+    .join('');
 }
 
 // puntos anotados por un equipo, el más reciente arriba y con su X para quitarlo.
@@ -1855,11 +1990,70 @@ const colorDe = c => (ACCENTS[c] || ACCENTS.azul)[S.theme] || ACCENTS.azul.light
 
 const mesaVacia = () => ({
   ids: [null, null, null, null], grupo: null, desde: Date.now(),
-  cerrada: 0, armando: true, contada: false, nueva: false, modo: S.mode || 'dom'
+  cerrada: 0, armando: true, contada: false, nueva: false, modo: S.mode || 'dom',
+  cuantos: 4, yoJuego: true
 });
+
+/* Se leen con valor por defecto a propósito: las mesas guardadas antes de esto
+   no traen los campos, y load() no puede rellenarlos por dentro. */
+const mesaCuantos = m => (m && m.cuantos === 2) ? 2 : 4;
+const yoJuego     = m => !m || m.yoJuego !== false;
+
+/* Con cuatro, las sillas de siempre. Con dos, la de abajo y la de la izquierda:
+   tienen que ser de equipos distintos —0 y 2 son compañeros— y la de la
+   izquierda se pone enfrente por CSS, que es donde se sienta un contrario. */
+const sillasMesa = m => mesaCuantos(m) === 2 ? [0, 1] : [0, 3, 2, 1];
+// las que se pueden llenar tocando a un conocido; la de abajo solo si no juegas
+const sillasLibres = m => (mesaCuantos(m) === 2 ? [1, 0] : [3, 2, 1, 0])
+  .filter(i => i !== 0 || !yoJuego(m));
+// hace falta al menos uno por equipo, o no hay partida que anotar
+const mesaVale = m => !!m && [0, 1].every(t => idsEquipo(t, m.ids).length > 0);
+
+/* Cambiar cuántos son, o si juegas o solo anotas, cambia de quién es cada
+   silla: lo que hubiera sentado ya no cuadra. Se queda quien anota, y solo si
+   juega; si no, la mesa se vacía entera. */
+function rehacerMesa(m) {
+  m.ids = [null, null, null, null];
+  if (yoJuego(m) && puedeFormal()) m.ids[0] = altaJugador(S.anotador) || null;
+}
 
 // Formal necesita nombre: allí quien anota es un jugador más de la mesa.
 const puedeFormal = () => !!(S.anotador || '').trim();
+// Formal y Por manos comparten mesa, jugadores, colores e identidad; lo unico
+// que cambia entre ellos es si se anotan puntos o solo quien gana.
+const conMesa = () => S.tipo === 'formal' || S.tipo === 'manos';
+const porManos = () => S.tipo === 'manos';
+/* Mejor de 5 son tres manos: la mitad más una. Siempre impar, para que no pueda
+   quedar en tablas. */
+// impares, para que una tanda no pueda quedar en tablas
+const MEJORES = [3, 5, 7, 9, 11, 13, 15];
+const mejorDe = () => MEJORES.includes(S.mejorDe) ? S.mejorDe : 5;
+const paraGanar = () => Math.floor(mejorDe() / 2) + 1;
+/* El tope de la partida: puntos si se anotan, manos si se juega por manos. Se
+   aplica al empezar, que es lo único que hace distinto a Por manos. */
+const topeDeJuego = () => porManos() ? paraGanar() : MODES[S.mode || 'dom'].target;
+/* Las manos ganadas, a rayas: cuatro palos y el quinto cruzándolos, igual que
+   el icono del modo. Los grupos de cinco se apilan uno encima de otro en vez de
+   seguir a lo ancho — a lo ancho se saldrían de la columna del equipo.
+
+   El ancho del dibujo lo pone la cantidad de palos, y la altura la fija el CSS,
+   así que un grupo de dos ocupa lo que ocupa y no un hueco de cinco. */
+function marcasHTML(n) {
+  if (!n) return '<span class="marcas"></span>';
+  const grupos = [];
+  for (let q = n; q > 0; q -= 5) grupos.push(Math.min(5, q));
+  return '<span class="marcas">' + grupos.map(k => {
+    const palos = Math.min(4, k);
+    const ancho = palos * 8 + 2;
+    const rayas = Array.from({ length: palos }, (_, i) => `<path d="M${4 + i * 8} 3v18"/>`).join('');
+    // el quinto cruza los otros cuatro, saliéndose un poco por los dos lados
+    const cruce = k === 5 ? `<path d="M1 20L${ancho - 1} 4"/>` : '';
+    return `<svg class="marca5" viewBox="0 0 ${ancho} 24">${rayas}${cruce}</svg>`;
+  }).join('') + '</span>';
+}
+
+const tiraMejorHTML = () => MEJORES.map(v =>
+  `<button data-mejor="${v}" aria-checked="${v === mejorDe()}">${v}</button>`).join('');
 
 /* El lanzador tiene dos pasos y cuál se ve sale de S.tipo, no de una variable
    suelta: así una recarga a medias no te deja en ninguna parte. */
@@ -1872,6 +2066,10 @@ function renderLanzador() {
   const bf = $('[data-tipo="formal"]');
   bf.classList.toggle('off', !puedeFormal());
   $('.mode-sub', bf).textContent = puedeFormal() ? '' : 'Pon tu nombre en Ajustes';
+  const bm = $('[data-tipo="manos"]');
+  bm.classList.toggle('off', !puedeFormal());
+  $('.mode-sub', bm).textContent = puedeFormal()
+    ? 'Sin puntos, solo quién gana' : 'Pon tu nombre en Ajustes';
   renderGrupoChips();
 }
 
@@ -1908,16 +2106,18 @@ function chipGrupoHTML(g) {
    que se está tecleando. Mismo trato que el control de tamaño de Ajustes. */
 function renderMesa() {
   const m = S.mesa || (S.mesa = mesaVacia());
-  // Quien anota ocupa siempre su silla: en Formal es un jugador más. Si el
-  // catálogo estuviera lleno altaJugador devuelve null, y ahí no se le quita
-  // el sitio: se deja lo que hubiera.
-  if (puedeFormal()) m.ids[0] = altaJugador(S.anotador) || m.ids[0];
+  // Quien anota ocupa su silla mientras diga que juega. Si el catálogo estuviera
+  // lleno altaJugador devuelve null, y ahí no se le quita el sitio.
+  if (yoJuego(m) && puedeFormal()) m.ids[0] = altaJugador(S.anotador) || m.ids[0];
 
   // Con juegos comunes guardados se ofrecen primero; armar es el otro camino.
   const guardados = gruposActivos();
   const armando = m.nueva || !guardados.length;
   $('#mesa-guardados').hidden = armando;
   $('#mesa-armar').hidden = !armando;
+  // de cuántas manos solo tiene sentido jugando por manos. Va aquí y no en
+  // refrescarMesa: esa no llega a correr cuando se ofrecen juegos guardados.
+  $('#mesa-mejor').hidden = !porManos();
   if (!armando) {
     $('#mesa-gchips').innerHTML = guardados.map(chipGrupoHTML).join('');
     return;
@@ -1929,21 +2129,24 @@ function renderMesa() {
   $('#mesa-ficha-svg').innerHTML = tileSVG(M.pips, M.pips);
   $('#mesa-cap').innerHTML = `<b>${M.label}</b> · ${M.target} pts · toca la ficha para cambiar`;
 
+  $('#mesa4').classList.toggle('de2', mesaCuantos(m) === 2);
   const foco = document.activeElement;
   $$('#mesa4 .silla').forEach(el => {
     const i = +el.dataset.silla, t = i % 2;   // abajo/arriba un equipo, los lados el otro
     el.style.setProperty('--as', colorDe(S.accents[t]));
     // no se repinta la silla que se está tecleando, o se pierde lo escrito
     if (el.contains(foco) && foco.tagName === 'INPUT') return;
-    if (i === 0 && puedeFormal()) {
+    if (i === 0 && yoJuego(m) && puedeFormal()) {
       el.classList.add('yo');
       el.innerHTML = `<span class="pt"></span>
         <span class="nom">${escapa(S.anotador)}</span><span class="tu">tú</span>`;
     } else {
       el.classList.remove('yo');
+      // sin ti en la mesa no hay "tu compañero": son cuatro jugadores y ya
+      const hueco = !yoJuego(m) ? 'Jugador' : (i === 2 ? 'Tu compañero' : 'Contrario');
       el.innerHTML = `<span class="pt"></span>
         <input data-silla-in="${i}" maxlength="18" spellcheck="false" autocomplete="off"
-               placeholder="${i === 2 ? 'Tu compañero' : 'Contrario'}"
+               placeholder="${hueco}"
                value="${escapa(nombreDeId(m.ids[i]))}">`;
     }
   });
@@ -1964,8 +2167,13 @@ function refrescarMesa() {
     .filter(j => !puestos.includes(j.id) && casaNombre(j.nombre, mesaFiltro))
     .sort(porNombre)
     .map(j => `<button data-poner="${j.id}">${escapa(j.nombre)}</button>`).join('');
-  // con menos de dos sentados no hay partida que anotar
-  $('#mesa-ok').disabled = puestos.length < 2;
+  $('#mesa-mejor-tira').innerHTML = tiraMejorHTML();
+  $$('[data-cuantos]').forEach(b =>
+    b.setAttribute('aria-checked', +b.dataset.cuantos === mesaCuantos(m)));
+  $$('[data-yojuego]').forEach(b =>
+    b.setAttribute('aria-checked', (b.dataset.yojuego === '1') === yoJuego(m)));
+  // hace falta al menos uno por equipo: dos compañeros no son una partida
+  $('#mesa-ok').disabled = !mesaVale(m);
   // llena la mesa, el campo sigue sirviendo para apuntar a alguien de más
   $('#mesa-alta-ok').textContent = puestos.length >= 4 ? 'Guardar' : 'Sentar';
 
@@ -1998,7 +2206,8 @@ function renderJug() {
   if (!jugBorrador) { jugBorrador = [...m.ids]; jugSilla = -1; }
   // la silla armada es la primera libre mientras no se elija otra
   if (jugSilla < 0 || jugBorrador[jugSilla]) {
-    const libre = [0, 2, 1, 3].find(i => !jugBorrador[i]);
+    const libre = [0, 2, 1, 3].filter(i => sillasMesa(m).includes(i))
+      .find(i => !jugBorrador[i]);
     jugSilla = libre === undefined ? -1 : libre;
   }
 
@@ -2006,7 +2215,7 @@ function renderJug() {
   $('#jug-cols').innerHTML = [0, 1].map(t =>
     `<div class="jug-col" style="--as:${colorDe(S.accents[t])}">
       <div class="cab"><i></i><span>${escapa(teamName(t))}</span></div>
-      ${[t, t + 2].map(i => jugBorrador[i]
+      ${[t, t + 2].filter(i => sillasMesa(m).includes(i)).map(i => jugBorrador[i]
         ? `<button class="jug-p" data-quitar="${i}" aria-label="Quitar a ${escapa(nombreDeId(jugBorrador[i]))}">
              <span>${escapa(nombreDeId(jugBorrador[i]))}</span>
              <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -2025,7 +2234,7 @@ function renderJug() {
   /* Con la mesa llena ya no se sienta a nadie, pero sí se puede apuntar gente:
      apuntarla es justo lo que se hace ANTES de que le toque entrar, y esconder
      el campo dejaba sin manera de hacerlo. */
-  const llena = puestos.length >= 4;
+  const llena = puestos.length >= mesaCuantos(m);
   $('#jug-lbl').textContent = llena ? 'Gente guardada' : 'Sentar a alguien';
   $('#jug-add').textContent = llena ? 'Guardar' : 'Sentar';
   $('#jug-hint').textContent =
@@ -2034,6 +2243,10 @@ function renderJug() {
     : llena ? 'La mesa está completa. Toca a alguien para quitarlo y dejar sitio.'
     : jugVale() ? 'Toca a alguien para quitarlo, o elige a quién sentar. Escribe para buscar.'
     : 'Cada equipo necesita al menos un jugador.';
+
+  $('#jug-extra-btn').setAttribute('aria-expanded', jugExtra);
+  $('#jug-extra').hidden = !jugExtra;
+  if (jugExtra) { renderNombres(); renderAccents(); }
 
   $('#jug-guardar').hidden = !jugCambia();
   $('#jug-ok').disabled = !jugVale();
@@ -2073,7 +2286,7 @@ async function guardarJug() {
 
 // Dos filas de puntos de color, una por equipo. Se muestra el tono del tema en
 // curso, y el que ya usa el otro equipo sale apagado para no repetirlo.
-function renderAccents(host = '#cfg-accents') {
+function renderAccents(host = '#jug-accents') {
   const sel = S.accents || DEFAULT_ACCENTS;
   $(host).innerHTML = [0, 1].map(i => `
     <div class="acc-row">
@@ -2141,7 +2354,7 @@ function renderBorrar() {
 
 // nombres de equipo, editables también sin partida empezada
 function renderNombres() {
-  const host = $('#cfg-nombres');
+  const host = $('#jug-nombres');
   if (host.contains(document.activeElement)) return;   // no pisar lo que se teclea
   host.innerHTML = [0, 1].map(t =>
     `<div class="eqrow" style="--as:${colorDe(S.accents[t])}">
@@ -2180,9 +2393,7 @@ function renderJugadores() {
 
 function renderConfig() {
   showVer();
-  renderAccents();
   renderJugadores();
-  renderNombres();
   renderBorrar();
   if (document.activeElement !== $('#cfg-anotador')) $('#cfg-anotador').value = S.anotador || '';
 
@@ -2191,10 +2402,10 @@ function renderConfig() {
      de nada. Los puntos solo salen con una mano empezada — sin partida el tope
      lo pone el modo al elegirlo, así que ahí no habría qué ajustar. */
   const conNombre = puedeFormal();
-  $('#cfg-sec-nombres').hidden   = !conNombre;
   $('#cfg-sec-jugadores').hidden = !conNombre;
   $('#cfg-sin-nombre').hidden    = conNombre;
-  $('#cfg-sec-puntos').hidden    = !S.mode;
+  // por manos el tope no son puntos: se elige al armar la mesa, con "¿Mejor de?"
+  $('#cfg-sec-puntos').hidden    = !S.mode || porManos();
   // los topes salen de las constantes: así el control no se despista si cambian
   const z = clampZoom(S.zoom);
   $('#zoom').min = ZOOM_MIN;
@@ -2203,7 +2414,6 @@ function renderConfig() {
   $('#zoom-val').textContent = z.toFixed(2) + '×';
   $('#t-val').textContent = S.target;
   $$('[data-target]').forEach(b => b.setAttribute('aria-checked', +b.dataset.target === S.target));
-  $$('[data-set-theme]').forEach(b => b.setAttribute('aria-checked', b.dataset.setTheme === S.theme));
   $$('[data-hora]').forEach(b => b.setAttribute('aria-checked', (b.dataset.hora === '12') === !!S.hora12));
   // con la partida empezada el estilo se cambia desde el menú, no desde aquí
   $('#cfg-sec-estilo').hidden = !!S.mode;
@@ -2263,13 +2473,18 @@ const jugadoresHTML = (r, t) => {
 
    Va en detalle y en pastillas, no en lista: esa fila es una sola línea y ya
    lleva ficha, marcador, ganador y hora. */
-const TIPO_TXT = { formal: 'Con jugadores', informal: 'Blitz' };
-const tipoMano = r => !r.ident ? '' : (r.ident.startsWith('f:') ? 'formal' : 'informal');
+const TIPO_TXT = { formal: 'Con jugadores', informal: 'Blitz', manos: 'Por manos' };
+/* Por manos comparte identidad con Formal —los dos son el cuarteto—, asi que no
+   se distingue por el ident: lo dice el propio registro. */
+const tipoMano = r => r.manos ? 'manos'
+  : !r.ident ? '' : (r.ident.startsWith('f:') ? 'formal' : 'informal');
 const cuandoHTML = r => {
   const t = TIPO_TXT[tipoMano(r)] || '';
   return `<span class="hcuando"><span class="hwhen">${fmtWhen(r.ts)}</span>` +
          (t ? `<span class="htipo">${t}</span>` : '') + '</span>';
 };
+/* Vale igual para las dos: por puntos son los puntos, por manos son las manos
+   de la tanda. "4 — 2" dice cómo quedó en los dos casos. */
 const marcador = r =>
   `<span class="hpts"><b style="color:${colorMano(r, 0)}">${r.scores[0]}</b><span class="d">—</span><b style="color:${colorMano(r, 1)}">${r.scores[1]}</b></span>`;
 
@@ -2289,7 +2504,7 @@ function manoHTML(r, vista) {
   }
   if (vista === 'pastillas') {
     return `<div class="hcard">
-      <span class="htop">${ficha}<span>${r.target}</span></span>
+      <span class="htop">${ficha}<span>${r.manos ? `de ${r.mejor || 5}` : r.target}</span></span>
       ${marcador(r)}
       <span class="hwin" style="color:${colorMano(r, r.w)}">${r.w === 0 ? n0 : n1}</span>
       ${cuandoHTML(r)}
@@ -2297,7 +2512,7 @@ function manoHTML(r, vista) {
   }
   return `<div class="hrow">
     <div class="hmeta">${cuandoHTML(r)}
-      <span class="hmode"><span>${r.target}</span>${ficha}</span></div>
+      <span class="hmode"><span>${r.manos ? `Mejor de ${r.mejor || 5}` : r.target}</span>${ficha}</span></div>
     <div class="hline">
       ${marcador(r)}
       <div class="hteams">${[n0, n1].map((nm, t) => `<span class="hcol">` +
@@ -2333,7 +2548,8 @@ function renderStats() {
      dicen aparte para que las cuentas cuadren a la vista. */
   const formales   = h.filter(r => tipoMano(r) === 'formal').length;
   const informales = h.filter(r => tipoMano(r) === 'informal').length;
-  const sinMarcar  = h.length - formales - informales;
+  const pormanos   = h.filter(r => tipoMano(r) === 'manos').length;
+  const sinMarcar  = h.length - formales - informales - pormanos;
   const yo = anotadorJugador();
 
   const manos = h.slice().reverse().map(r => manoHTML(r, vista)).join('');
@@ -2357,6 +2573,7 @@ function renderStats() {
       <div class="stat-card">
         ${row('Manos guardadas', h.length)}
         ${row(TIPO_TXT.formal, formales)}
+        ${pormanos ? row(TIPO_TXT.manos, pormanos) : ''}
         ${row(TIPO_TXT.informal, informales)}
         ${sinMarcar ? row('Sin marcar', sinMarcar) : ''}
         ${yo ? row('Ganadas por ti', yo.ganadas || 0) : ''}
@@ -2384,7 +2601,7 @@ function recount() {
       S.games[prev] = Math.max(0, S.games[prev] - 1);
       S.history.pop();
       // desganar también deshace las estadísticas, y solo las hubo en formal
-      if (S.tipo === 'formal') contarManos(prev, -1);
+      if (conMesa()) contarManos(prev, -1);
     }
     // al ganar NO saltamos a la pantalla de resultado: se queda el tablero y
     // aparece "Revisar la mano" en el pie por si la quieren ver.
@@ -2401,13 +2618,15 @@ function recount() {
         accents: [...S.accents]  // y con qué color se jugó, para que no cambie después
       };
       // solo las partidas formales dejan constancia de quién jugó
-      if (S.tipo === 'formal' && S.mesa && grupoCompleto(S.mesa.ids)) {
+      if (conMesa() && S.mesa && grupoCompleto(S.mesa.ids)) {
         reg.mesa = [...S.mesa.ids];
         if (S.mesa.grupo) reg.grupo = S.mesa.grupo;
       }
       S.history.push(reg);
       if (S.history.length > HISTORY_MAX) S.history.shift();
-      if (S.tipo === 'formal') { contarManos(w, +1); contarAparicion(); }
+      if (conMesa()) { contarManos(w, +1); contarAparicion(); }
+      // una fila por tanda, y de cuántas era: el tope guardado son manos, no puntos
+      if (porManos()) { reg.manos = 1; reg.mejor = mejorDe(); }
       winSeen = true;
     }
     S.over = w;
@@ -2459,6 +2678,16 @@ function removeEntry(i) {
   S.rounds.splice(i, 1);
   recount();
   save(); render();
+}
+
+/* Una mano ganada vale UN punto de la tanda. Al llegar al tope, recount() la
+   cierra y la guarda como una sola fila del historial, con lo que quedó. */
+function ganaMano(t) {
+  if (S.over >= 0) return;
+  addRound(t, 1);
+  // la pantalla de ganador se guarda para el final de la tanda; entre manos no
+  // hay nada que mirar y pararse ahí costaba dos toques de más
+  if (S.over >= 0) { winSeen = false; render(); }
 }
 
 function newGame() {
@@ -2626,7 +2855,11 @@ $$('[data-go]').forEach(b => b.addEventListener('click', () => {
 
 // ---- ajustes ----
 function setTarget(v) {
-  S.target = Math.max(TARGET_MIN, Math.min(TARGET_MAX, v));
+  /* Los topes de 50 a 500 son de puntos. Por manos el tope son manos —de 2 a 8
+     con los impares que se ofrecen—, así que recortarlo ahí lo convertía en 50
+     y la tanda no se acababa nunca. */
+  S.target = porManos() ? Math.max(1, v)
+                        : Math.max(TARGET_MIN, Math.min(TARGET_MAX, v));
   recount();            // puede cerrar la mano, o reabrirla si se sube el tope
   save(); render();
 }
@@ -2635,9 +2868,6 @@ $$('[data-step]').forEach(b => b.addEventListener('click', () => {
 }));
 $$('[data-target]').forEach(b => b.addEventListener('click', () => {
   buzz(8); setTarget(+b.dataset.target);
-}));
-$$('[data-set-theme]').forEach(b => b.addEventListener('click', () => {
-  S.theme = b.dataset.setTheme; buzz(8); save(); render();
 }));
 $$('[data-hora]').forEach(b => b.addEventListener('click', () => {
   S.hora12 = b.dataset.hora === '12'; buzz(8); save(); render();
@@ -2674,7 +2904,7 @@ function elegirAcento(yo, k) {
   if (!(S.mesa && S.mesa.armando)) guardarColores(S.ident, acc);
   buzz(8); save(); render();
 }
-['#cfg-accents', '#mesa-accents'].forEach(sel =>
+['#jug-accents', '#mesa-accents'].forEach(sel =>
   $(sel).addEventListener('click', e => {
     const b = e.target.closest('[data-acc]'); if (!b) return;
     const [i, k] = b.dataset.acc.split(':');
@@ -2744,14 +2974,14 @@ $('#reg-saltar').addEventListener('click', () => {
 // Informal arranca como siempre; Formal se va a armar la mesa.
 $$('[data-tipo]').forEach(b => b.addEventListener('click', () => {
   const tipo = b.dataset.tipo;
-  if (tipo === 'formal' && !puedeFormal()) {
+  if (tipo !== 'informal' && !puedeFormal()) {
     buzz([16, 55, 16]);
-    toast('Para jugar Formal, pon tu nombre en Ajustes');
+    toast('Para jugar con jugadores, pon tu nombre en Ajustes');
     return;
   }
   S.tipo = tipo;
   buzz(10);
-  if (tipo === 'formal') {
+  if (tipo !== 'informal') {
     if (!S.mesa || !S.mesa.armando) S.mesa = mesaVacia();
     view = 'mesa';
   } else {
@@ -2760,6 +2990,11 @@ $$('[data-tipo]').forEach(b => b.addEventListener('click', () => {
        dijo quién juega sería mentira en el tablero y en el historial. */
     S.names = [...DEFAULT_NAMES];
     nuevaTanda(identInformal());               // otra gente: la cuenta empieza de nuevo
+    /* Blitz no pregunta quién juega, así que los colores no son de nadie: van
+       siempre azul y rojo. Si venían cambiados de otra mesa, se reponen —
+       nuevaTanda ya pudo haber recordado los de la última vez. */
+    S.accents = [...BLITZ_ACCENTS];
+    guardarColores(S.ident, S.accents);
     if (S.mesa) S.mesa.cerrada = S.mesa.cerrada || Date.now();
   }
   save(); render();
@@ -2783,7 +3018,7 @@ $('#mesa4').addEventListener('change', e => {
    juega. La silla de abajo no entra: es la de quien anota. */
 $('#mesa-conocidos').addEventListener('click', e => {
   const b = e.target.closest('[data-poner]'); if (!b) return;
-  const libre = [3, 2, 1].find(i => !S.mesa.ids[i]);
+  const libre = sillasLibres(S.mesa).find(i => !S.mesa.ids[i]);
   if (libre === undefined) { toast('La mesa ya está llena'); return; }
   S.mesa.ids[libre] = b.dataset.poner;
   buzz(8); save(); renderMesa();
@@ -2795,6 +3030,23 @@ $('#mesa-nuevo').addEventListener('click', () => {
 });
 $('#mesa-gchips').addEventListener('click', e => usarGrupo(e));
 
+/* Cuántos son y si juegas: las dos cambian de quién es cada silla, así que las
+   dos vacían la mesa por el mismo motivo. */
+$('#mesa-quien').addEventListener('click', e => {
+  const j = e.target.closest('[data-mejor]');
+  if (j) {
+    S.mejorDe = +j.dataset.mejor;
+    if (porManos()) S.target = paraGanar();
+    buzz(8); save(); refrescarMesa(); return;
+  }
+  const c = e.target.closest('[data-cuantos]'), y = e.target.closest('[data-yojuego]');
+  if (!c && !y) return;
+  const m = S.mesa; if (!m) return;
+  if (c) m.cuantos = +c.dataset.cuantos; else m.yoJuego = y.dataset.yojuego === '1';
+  rehacerMesa(m);
+  buzz(8); save(); renderMesa();
+});
+
 /* Dar de alta a alguien desde la mesa. Si hay silla libre se sienta —contra el
    reloj, como al tocar un conocido—; si no, queda apuntado para otro día. */
 $('#mesa-alta-ok').addEventListener('click', () => {
@@ -2802,7 +3054,7 @@ $('#mesa-alta-ok').addEventListener('click', () => {
   if (!nom) { el.focus(); return; }
   const id = altaJugador(nom);
   if (!id) { toast('Ya no caben más jugadores guardados'); return; }
-  const libre = [3, 2, 1].find(i => !S.mesa.ids[i]);
+  const libre = sillasLibres(S.mesa).find(i => !S.mesa.ids[i]);
   if (libre === undefined) toast('Guardado. La mesa ya está llena');
   else S.mesa.ids[libre] = id;
   el.value = ''; mesaFiltro = ''; buzz(8); save(); renderMesa();
@@ -2848,23 +3100,39 @@ $('#jug-nombre').addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); $('#jug-add').click(); }
 });
 $('#jug-ok').addEventListener('click', guardarJug);
+$('#jug-extra-btn').addEventListener('click', () => {
+  jugExtra = !jugExtra; buzz(8); renderJug();
+});
 
 /* Los jugadores solo existen en Formal, y Formal necesita un nombre. Cada
    "no se puede" dice lo que falta para poder. */
+$('#cuanta-btn').addEventListener('click', () => {
+  cuantaAbierta = !cuantaAbierta; buzz(8); render();
+});
+$('#cuanta-tira').addEventListener('click', e => {
+  const b = e.target.closest('[data-mejor]'); if (!b) return;
+  S.mejorDe = +b.dataset.mejor;
+  cuantaAbierta = false;
+  buzz(8);
+  /* setTarget y no S.target a pelo: si alguien ya tiene las que hacen falta,
+     la tanda se cierra ahí mismo, igual que al bajar el tope de puntos. */
+  setTarget(paraGanar());
+});
+
 $('#btn-jug').addEventListener('click', () => {
   buzz(8);
   if (!puedeFormal()) return toast('Pon tu nombre en Ajustes y podrás jugar en Formal');
-  if (S.tipo !== 'formal' || !S.mesa)
-    return toast('Esta mano es informal. Empieza una en Formal para ver los jugadores');
+  if (!conMesa() || !S.mesa)
+    return toast('Esta mano es Blitz. Cambia a anotar con jugadores para poder acceder.');
   view = 'jugadores'; render();
 });
 
 // nombres de equipo desde Ajustes: en vivo sin render(), se guarda al soltar
-$('#cfg-nombres').addEventListener('input', e => {
+$('#jug-nombres').addEventListener('input', e => {
   const el = e.target.closest('[data-cfgnom]'); if (!el) return;
   S.names[+el.dataset.cfgnom] = el.value;
 });
-$('#cfg-nombres').addEventListener('change', e => {
+$('#jug-nombres').addEventListener('change', e => {
   const el = e.target.closest('[data-cfgnom]'); if (!el) return;
   const t = +el.dataset.cfgnom;
   S.names[t] = el.value.trim() || DEFAULT_NAMES[t];
@@ -2936,7 +3204,7 @@ $('#mesa-ok').addEventListener('click', () => {
   nuevaTanda(identFormal(m.ids));   // gente nueva en la mesa, cuenta nueva
   guardarColores(S.ident, S.accents);   // con los colores que se acaban de elegir
   S.mode   = m.modo || 'dom';
-  S.target = MODES[S.mode].target;
+  S.target = topeDeJuego();
   view = 'game';
   recount();
   buzz(12); save(); render();
@@ -2973,11 +3241,13 @@ function usarGrupo(e) {
   const b = e.target.closest('[data-grupo]'); if (!b) return;
   const g = S.grupos.find(x => x.id === b.dataset.grupo); if (!g) return;
   S.mesa = { ids: [...g.ids], grupo: g.id, desde: Date.now(),
-             cerrada: 0, armando: false, contada: false, nueva: false, modo: g.mode };
+             cerrada: 0, armando: false, contada: false, nueva: false, modo: g.mode,
+             cuantos: 4, yoJuego: true };   // un juego común guardado es un cuarteto
   S.names   = [0, 1].map(t => nombreDerivado(t, g.ids) || teamName(t, g.nombres));
-  S.tipo    = 'formal';
+  // el juego común dice con QUIÉN se juega; cómo se cuenta ya estaba elegido
+  if (S.tipo !== 'manos') S.tipo = 'formal';
   S.mode    = g.mode;
-  S.target  = g.target;
+  S.target  = topeDeJuego();   // por manos el tope son manos, no los puntos del grupo
   // el grupo manda sobre lo que recuerde la tanda: es lo que se guardó a mano
   nuevaTanda(identFormal(g.ids));
   S.accents = [...g.accents];
@@ -2991,13 +3261,24 @@ function usarGrupo(e) {
 $('#grupo-chips').addEventListener('click', e => {
   if (!e.target.closest('[data-seguir]')) return;
   S.mesa.cerrada = 0; S.mesa.armando = false; S.mesa.contada = false;
-  S.tipo = 'formal';
+  if (S.tipo !== 'manos') S.tipo = 'formal';   // seguir es seguir, no cambiar de juego
   buzz(12); save(); render();
 });
 
 $$('.team').forEach(el => {
   const i = +el.dataset.team;
-  $('.add', el).addEventListener('click', () => { buzz(10); openPad(i); });
+  /* Por manos el boton no abre el teclado: anota de una vez una ronda que vale
+     el tope entero, y de ahi para abajo todo sigue el camino de siempre. */
+  $('.add', el).addEventListener('click', () => {
+    buzz(10);
+    if (porManos()) ganaMano(i); else openPad(i);
+  });
+  // deshacer: se quita la última que ganó ESE equipo, no la última de la mesa
+  $('.menos', el).addEventListener('click', () => {
+    const ult = S.rounds.map((r, k) => ({ r, k })).filter(x => x.r.t === i).pop();
+    if (!ult) return;
+    buzz(10); removeEntry(ult.k);
+  });
   const nameEl = $('.name', el);
   nameEl.addEventListener('focus', () => nameEl.select());
   nameEl.addEventListener('input', () => { S.names[i] = nameEl.value; save(); });
@@ -3057,6 +3338,7 @@ menu.addEventListener('click', e => {
   menu.classList.remove('on');
   buzz(8);
   if (b.dataset.setStyle) { S.style = b.dataset.setStyle; save(); render(); return; }
+  if (b.dataset.setTheme) { S.theme = b.dataset.setTheme; save(); render(); return; }
   doAct(b.dataset.act);
 });
 
@@ -3307,6 +3589,12 @@ async function hardReset() {
   if (!await ask('Reinstalar la app',
       'Se borra la copia guardada en el teléfono y se baja otra vez, así que hace falta internet ahora mismo. Los puntos, los nombres y el historial no se tocan.',
       'Reinstalar')) return;
+  reinstalar();
+}
+
+// Lo que hace el trabajo, sin preguntar: hay dos sitios que lo piden y cada uno
+// tiene su propio cartel.
+async function reinstalar() {
   try {
     if ('serviceWorker' in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
@@ -3346,6 +3634,21 @@ async function showVer() {
 /* Avisar de que entró una versión nueva. Se compara con la última que se vio,
    guardada en el estado: aplicar una actualización recarga la página, así que
    nada que viva en memoria sobreviviría para contarlo. */
+/* Aviso de una vez: hubo versiones que podían quedarse a medias en el teléfono
+   —número nuevo, pantalla vieja— por lo de addAll y la caché HTTP. Ya no puede
+   volver a pasar, pero quien se quedó así no se entera solo. */
+async function avisarReinstalar() {
+  if (S.avisoCache) return;
+  S.avisoCache = 1; save();          // se ofrece una vez, se diga que sí o que no
+  const si = await ask('Conviene reinstalar',
+    'Puede que tu teléfono se haya quedado con una copia a medias de alguna ' +
+    'versión: el número decía una cosa y la app era otra. Reinstalar la baja ' +
+    'entera otra vez, y hace falta internet ahora mismo. Los puntos, los ' +
+    'nombres y el historial no se tocan.',
+    'Reinstalar', false, '', 'Ahora no');
+  if (si) reinstalar();
+}
+
 async function avisarActualizacion() {
   const v = await swVersion();
   if (!v) return;
@@ -3427,7 +3730,10 @@ render();
 
 // si entró una versión nueva desde la última vez, decirlo
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.ready.then(avisarActualizacion).catch(() => {});
+  navigator.serviceWorker.ready
+    .then(avisarActualizacion)
+    .then(avisarReinstalar)
+    .catch(() => {});
 }
 </script>
 </body>
