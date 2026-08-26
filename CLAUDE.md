@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The app was called "Dominó" until v1.18. Two things deliberately kept the old name: the `localStorage` key `domino.v2` (renaming it would wipe everyone's history) and the repo/Pages path `hyco-ot.github.io/domino` (the PWA's scope — renaming the repo would orphan every installed copy). Neither is user-visible.
 
-`2.00` added the player system (see **Players, table and identity**). The previous release is kept playable at `/1.37/` — a frozen copy, described under **The archived copy**.
+`2.00` added the player system (see **Players, table and identity**); `3.00` added the three-player table (see **Three at the table**). Two previous releases are kept playable — `/1.37/` (the last one before players) and `/2.81/` (the last one before the three-player table) — frozen copies described under **The archived copies**.
 
 **Big work happens on a clone.** `c:\Claude\Tranque-v2` is a full copy of the app that is never published, kept isolated by four markers: the `<title>`, `KEY = 'tranque.pruebas'`, the manifest name, and `VERSION = '2.00-dev'` / `CACHE = tranque-pruebas-…`. Anything shipped to `main` while a clone is open has to be ported into it before that clone is published, or publishing silently reverts it.
 
@@ -53,7 +53,7 @@ When testing changes with the SW registered, hard-reload or use DevTools → App
 
 All state lives in one object `S` (see `blank()`), serialized to `localStorage` under the key `domino.v2`. `load()` does `{ ...blank(), ...raw }` — a **shallow** merge, so **adding a top-level field to `blank()` is free**, but the shape of an already-stored nested record can never be changed. That is why history entries only ever gained *optional* fields.
 
-`S.esquema` is the migration counter, and it is what makes one-time migrations possible at all. `load()` reads **`raw.esquema`**, not the merged value — the merged one comes from `blank()` for anyone who has never stored it, so a pre-2.00 install would look already-migrated. Installs older than 2.00 have no `esquema` and count as `1`.
+`S.esquema` is the migration counter (now at **7**), and it is what makes one-time migrations possible at all. `load()` reads **`raw.esquema`**, not the merged value — the merged one comes from `blank()` for anyone who has never stored it, so a pre-2.00 install would look already-migrated. Installs older than 2.00 have no `esquema` and count as `1`.
 
 Things deliberately kept out of `S`, so they don't survive a restart: `winSeen`, `view`, `lisaWord`, `preguntandoUpd` / `updPospuesta`, and `borrarSel` / `borrarAbierto`.
 
@@ -148,7 +148,9 @@ Four top-level fields carry it: `S.anotador` (who is keeping score), `S.jugadore
 
 **Seats go anticlockwise from the scorekeeper**, who is always seat 0, at the bottom of the screen: `0` bottom, `1` left, `2` opposite, `3` right. Partners sit across from each other, so `idsEquipo(t, ids)` pairs `t` with `t+2`. Filling and rotating both follow `0 → 3 → 2 → 1`, which is the direction dominoes actually move around a table.
 
-`MAX_JUGADORES`, `MAX_GRUPOS` and `MAX_COLORES` are load-bearing, not decoration: `save()` swallows quota errors, so an unbounded list stops persisting **silently**.
+`MAX_JUGADORES`, `MAX_GRUPOS` and `MAX_COLORES` are load-bearing, not decoration: `save()` swallows quota errors, so an unbounded list stops persisting **silently**. `HISTORY_MAX` is 400 hands — at 100 a family playing daily lost a month of history to `shift()`. `cuota.mjs` fills every list to its cap at once and measures: **207 KB** against the ~5 MB a browser gives, and it fails above 1 MB.
+
+**`S.parejas` — who wins with whom.** Keyed `'idA|idB'` with the two ids sorted, so the pair is the same whoever sat where, and counted in `contarManos()` with the same both-ways rule as each player's own tally. It is a durable counter for the reason the history can't be one: a window of 400 hands erases the evidence of a habit that took months to form — the same lesson `contarAparicion()` already learned. The history summary shows pairs with **four hands together or more** (`PAREJA_MIN`); below that the percentage is noise. `esquema 6` seeds it once from whatever is still in the window, so the panel says something the day it ships instead of two months later. It has no cap of its own: all 64 players paired with each other is 2016 entries, and that is inside the measurement above.
 
 ### `S.ident` — whose hands these are
 
@@ -160,6 +162,27 @@ Two consequences worth keeping:
 
 - **Colours belong to the people, not to the app.** `S.colores` remembers the accent pair per identity, so sitting down with the same four restores their colours, and a history row keeps the colours it was played with. History rows therefore set colour **inline** from `colorMano(r, t)`, never via the `.t0`/`.t1` classes, which point at the live `--a`/`--b` and would repaint three-day-old hands.
 - **Don't invent an identity for old data.** The Formal/Informal label in the history (`tipoMano(r)`) renders nothing when `r.ident` is missing, because that distinction didn't exist when those hands were played.
+
+### Three at the table (3.00)
+
+Two people or four means two scoring columns; **three means three**, everyone against everyone, nobody with a partner. That is the first time "the team" stops being 0-or-1, and it is what the whole release is about: every `[0, 1]` in the code became `cadaEq()`, which answers two or three.
+
+- `nEq()` / `cadaEq()` — how many columns there are now, and their indices.
+- `esTres()` — the live table is a trio. It reads `S.mesa.cuantos === 3`, so it is Formal-only by construction: Blitz has no mesa.
+- `ASIENTOS3 = [1, 0, 3]` — which **seat** paints in which **column**. The scorekeeper (seat 0) lands in the middle column, because that is their own score and it sits under their thumb. The trio uses no north seat.
+- `idsEquipo(t, ids, tres)` — partners across the table for two/four, a single person for three. **The third argument is not optional in spirit:** this is also called with the mesa of a *stored* hand, which can be a trio when the live table isn't. Its default reads the live table, so any caller working on history has to pass the record's own answer.
+
+A stored hand carries `r.tres`, and `manoTres(r)` is the **only** way to ask. Asking `r.tres` directly left out hands saved before the flag existed, which the history still painted with three figures — the pill showed three scores and the detail sheet showed two.
+
+Three consequences that were each a bug first:
+
+- **Anything that resets a score array has to size it.** `newGame()` hard-coded `[0, 0]`, so the second hand of a trio painted "Faltan NaN" in the third column.
+- **Colours are as many as there are columns.** `acentosAlDia()` swaps the whole set when the count stops matching, and it is called from `renderMesa()` and from `#mesa-ok` — the two moments the count can change. `TRES_ACCENTS` is morado · azul · verde, in column order, so the scorekeeper in the middle is blue.
+- **There are two "others" now.** Picking a colour someone else has swaps with them; with three, the code has to find *which* one. Same for lisa: it is winning without **anyone** else scoring, not without the other one scoring.
+
+Team names don't exist at a trio: each column is a person, so the "Nombres de los equipos" section hides itself and the names always come from who is seated. The board columns get their own smaller scale through `--sc`, since each has a third of the screen instead of half.
+
+**Landscape is not scoped to the mode, and can't be.** The lock lived in the manifest, which applies to the whole app, and the Screen Orientation API isn't available on iOS. So the lock was dropped and every screen was made to survive sideways — the lists scroll, the pad shrinks its keys, the board trims vertical chrome. The trio is the case that actually gains from it.
 
 ### Two ways to sit down, three ways to score
 
@@ -272,9 +295,9 @@ Two invariants to preserve:
 
 **Diagnosing a phone stuck on an old version.** Ajustes shows the version the active worker reports (`showVer()` asks it over a `MessageChannel`). If it says `desconocida (service worker viejo)`, a pre-update-flow worker is still in control: it has no `GET_VERSION` handler and can't be asked to step aside.
 
-### The archived copy
+### The archived copies
 
-`/1.37/` is the previous release, kept playable at `hyco-ot.github.io/domino/1.37/`. It is built from `git show HEAD:index.html` with four things removed, and each removal exists because of a real failure mode:
+`/1.37/` and `/2.81/` are kept playable at `hyco-ot.github.io/domino/<version>/` — the last release before the player system, and the last one before the three-player table. Each is built by `archivar.mjs` from `git show HEAD:index.html` with four things removed, and each removal exists because of a real failure mode:
 
 - **No service-worker registration and no `<link rel="manifest">`** — it's a page, not a second installable app.
 - **Deaf to `navigator.serviceWorker.ready`.** The copy lives under `/domino/`, so the *live* app's worker also controls it. Left connected, it would announce "Actualizado a la versión 2.00" from inside the old app.
