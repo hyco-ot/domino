@@ -764,16 +764,27 @@ button{border:0;background:none;cursor:pointer}
 /* El marcador contra la izquierda y ahí se queda, gane quien gane: puesto en
    medio de los dos nombres se movía de sitio en cada fila y la columna de
    cifras no se podía leer de un vistazo. Los nombres se reparten lo que sobra. */
-.hline{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:11px}
-.hteams{display:flex;align-items:center;justify-content:center;gap:7px;min-width:0}
+/* El marcador manda y los nombres ocupan lo que queda; si no queda bastante,
+   los nombres se bajan a su propia linea en vez de quedarse sin sitio. */
+.hline{display:flex;flex-wrap:wrap;align-items:center;gap:6px 11px}
+.hteams{display:flex;align-items:center;justify-content:center;gap:7px;
+  flex:1 1 190px;min-width:0}
 .hteam{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
   color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 /* El ganador va de su color y el otro en gris. El ✓ se queda: el color solo no
-   basta cuando los dos equipos tienen tonos parecidos. */
-.hteams .hteam.win::after{content:' ✓';color:var(--ok)}
+   basta cuando los dos equipos tienen tonos parecidos.
+   Se llama "gano" y no "win": .win es la PANTALLA de ganador —fija, a pantalla
+   completa y con opacity:0— y este span la heredaba entera, asi que el nombre
+   del que ganaba era lo unico que no se veia. */
+.hteams .hteam.gano::after{content:' ✓';color:var(--ok)}
 /* Debajo del nombre de equipo, quiénes lo jugaron. Va en columna para que la
    pareja no le robe ancho al nombre. */
-.hcol{display:flex;flex-direction:column;align-items:center;min-width:0;gap:1px}
+/* flex:1 1 0 y no el reparto de fábrica: sin base, en una fila apretada el
+   navegador le quitaba el ancho entero a la ULTIMA columna y la dejaba en cero
+   — el nombre estaba pintado, pero medía nada. Así encogen todas a la vez y con
+   puntos suspensivos, que es lo que se espera cuando algo no cabe. */
+.hcol{display:flex;flex-direction:column;align-items:center;
+  flex:1 1 0;min-width:0;gap:1px}
 .hjug{font-style:normal;font-size:10px;font-weight:600;letter-spacing:.01em;
   text-transform:none;color:var(--dim);opacity:.85;max-width:100%;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -3291,7 +3302,7 @@ function manoHTML(r, vista, idx) {
       ${marcador(r)}
       <div class="hteams">${noms.map((nm, t) => `<span class="hcol">` +
         (t === r.w
-          ? `<span class="hteam win" style="color:${colorMano(r, t)}">${escapa(nm)}</span>`
+          ? `<span class="hteam gano" style="color:${colorMano(r, t)}">${escapa(nm)}</span>`
           : `<span class="hteam">${escapa(nm)}</span>`) +
         jugadoresHTML(r, t) + `</span>`).join('<span class="hvs">·</span>')}</div>
     </div>
