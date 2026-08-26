@@ -77,6 +77,16 @@ body{
 button,input{font:inherit;color:inherit}
 button{border:0;background:none;cursor:pointer}
 
+/* Acostada a mano, cuando el teléfono no deja girar. Se gira el <body> entero:
+   el teclado de puntos, los diálogos y el cartel de ganador son hermanos de
+   #app, no hijos, y girando solo #app se quedarían de pie encima. Lo de fixed
+   dentro sigue funcionando porque pasa a medirse contra el body girado. */
+[data-acostado="1"] body{
+  position:fixed;top:0;left:0;
+  width:100vh;height:100vw;
+  transform-origin:top left;
+  transform:rotate(90deg) translateY(-100vh);
+  overflow:hidden}
 #app{height:100%;display:flex;flex-direction:column;
   padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 .screen{display:none;flex:1;min-height:0;flex-direction:column}
@@ -769,6 +779,9 @@ button{border:0;background:none;cursor:pointer}
 .menu button[aria-checked="true"] .tick{opacity:1}
 .menu button[aria-checked="true"]{font-weight:600}
 .menu .sep{height:1px;background:var(--line);margin:6px 8px}
+/* .menu button trae su propio display: sin esto, el hidden del navegador no
+   esconde nada. Es la sexta vez que muerde esta misma trampa. */
+.menu button[hidden], .menu .sep[hidden]{display:none}
 /* segunda línea de la opción: dice qué hace, o por qué no se puede ahora */
 .menu .mi{display:flex;flex-direction:column;gap:2px;text-align:left}
 .menu .mi i{font-style:normal;font-size:11.5px;font-weight:500;color:var(--dim);line-height:1.25}
@@ -1443,6 +1456,11 @@ button{border:0;background:none;cursor:pointer}
 
 <!-- menú de opciones -->
 <div class="menu" id="menu">
+  <!-- Solo en teléfono: en un ordenador la pantalla ya está acostada. -->
+  <button id="mi-acostar" hidden>
+    <svg viewBox="0 0 24 24"><rect x="2.5" y="6.5" width="19" height="11" rx="2.2"/><path d="M17.5 3.5l3 3-3 3"/></svg>
+    <span class="mi">Acostar la pantalla<i></i></span></button>
+  <div class="sep" id="sep-acostar" hidden></div>
   <div class="lbl">Estilo</div>
   <button data-set-style="chercha">
     <svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-2.9-.4L3.5 21l1.6-4.6A8.3 8.3 0 0 1 3.6 11.5 8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/></svg>
@@ -1641,8 +1659,11 @@ const GRUPO_VENTANA = 60 * 24 * 3600 * 1000; // 60 días: tres noches en medio a
 
 /* Id corto y estable. Los nombres se reescriben, se repiten entre primos y
    cambian de mayúsculas; sin id, renombrar a alguien le parte la historia en
-   dos sin avisar. Va corto porque se copia dentro de cada mano del historial. */
-const nuevoId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+   dos sin avisar. Va corto porque se copia dentro de cada mano del historial —
+   pero no TAN corto: con tres caracteres al azar, dar de alta a varios en el
+   mismo milisegundo podia repetir uno, y dos personas con el mismo id funden
+   su historial. Seis dejan eso en imposible y cuestan 3 bytes por jugador. */
+const nuevoId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const ORDINALS = ['Primera','Segunda','Tercera','Cuarta','Quinta',
                   'Sexta','Séptima','Octava','Novena','Décima'];
 
@@ -1840,6 +1861,13 @@ let mesaCustom = false;      // ni este: el acordeón de la mesa
 let sillaAbierta = -1;       // qué silla se está llenando, o -1
 let cfgJugAbierto = false;   // el acordeón de jugadores en Ajustes
 let cuantaAbierta = false;   // el de la tanda, en el tablero
+/* Acostada a mano. No persiste: es estado de pantalla, como view. Si se recarga
+   —una actualización, por ejemplo— vuelve de pie, que es lo esperable. */
+let acostado = false;
+/* Solo tiene sentido con un dedo y una pantalla chica: en un ordenador la
+   pantalla ya está acostada, y en una tablet grande cabe de pie. */
+const esTelefono = () => matchMedia('(pointer: coarse)').matches &&
+  Math.min(innerWidth, innerHeight) < 820;
 /* Qué equipo acaba de anotar, para que su fila y su cifra entren bajando. No
    persiste ni cuenta como estado: vale para un solo repintado. */
 let filaNueva = -1;
@@ -1847,6 +1875,31 @@ let filaNueva = -1;
 /* Una animación de entrada, una vez. No persiste ni se guarda en el estado: se
    pone, se deja correr y se quita, para que el siguiente repintado no la repita. */
 const ANIMS = ['anim-izq', 'anim-der', 'anim-abajo', 'anim-fade', 'anim-baja'];
+/* Dos caminos, y se prueba el bueno primero:
+   1. Girar DE VERDAD, con pantalla completa y bloqueo de orientación. Es lo
+      correcto —el teclado sale bien, nada va falseado— pero pide pantalla
+      completa y en iOS la API no existe.
+   2. Si eso falla, girar la app por CSS. Se gira el <body> entero y no #app,
+      porque el teclado de puntos, los diálogos y el cartel de ganador viven
+      fuera de #app: girando solo #app se quedarían de pie encima. */
+async function acostar() {
+  if (acostado) return levantar();
+  try {
+    await document.documentElement.requestFullscreen();
+    await screen.orientation.lock('landscape');
+    acostado = 'real';
+  } catch {
+    acostado = 'css';
+  }
+  buzz(10); render();
+}
+async function levantar() {
+  try { screen.orientation.unlock(); } catch {}
+  try { if (document.fullscreenElement) await document.exitFullscreen(); } catch {}
+  acostado = false;
+  buzz(10); render();
+}
+
 function animar(sel, clase) {
   const el = $(sel); if (!el) return;
   el.classList.remove(...ANIMS);
@@ -2230,6 +2283,15 @@ function render() {
     root.style.setProperty(['--a', '--b', '--c'][i], acc[S.theme] || acc.light);
   });
   $('meta[name=theme-color]').content = BAR_COLOR[S.theme];
+  /* El giro por CSS cuelga del <html>, para que arrastre TODO lo que hay bajo
+     el <body> y no solo la app. */
+  root.dataset.acostado = acostado === 'css' ? '1' : '';
+  const enTel = esTelefono();
+  $('#mi-acostar').hidden = !enTel;
+  $('#sep-acostar').hidden = !enTel;
+  $('#mi-acostar i').textContent = acostado ? 'Tocar otra vez para levantarla' : '';
+  $('#mi-acostar span.mi').firstChild.textContent =
+    acostado ? 'Levantar la pantalla' : 'Acostar la pantalla';
   $$('[data-set-style]').forEach(b => b.setAttribute('aria-checked', b.dataset.setStyle === S.style));
   $$('[data-set-theme]').forEach(b => b.setAttribute('aria-checked', b.dataset.setTheme === S.theme));
 
@@ -3884,6 +3946,8 @@ $('#jug-extra-btn').addEventListener('click', () => {
 
 /* Los jugadores solo existen en Formal, y Formal necesita un nombre. Cada
    "no se puede" dice lo que falta para poder. */
+$('#mi-acostar').addEventListener('click', () => { menu.classList.remove('on'); acostar(); });
+
 $('#btn-cuanta').addEventListener('click', () => {
   cuantaAbierta = !cuantaAbierta; buzz(8); render();
   if (cuantaAbierta) animar('#cuanta', 'anim-baja');
