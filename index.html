@@ -117,12 +117,12 @@ button{border:0;background:none;cursor:pointer}
 @keyframes entraFila {from{opacity:0;transform:translateY(-80%)}}
 @keyframes bajaCifra {from{opacity:.25;transform:translateY(-12%)}}
 @keyframes bajaBloque{from{opacity:0;transform:translateY(-9px)}}
-/* "Revisar la mano" aparece de golpe al acabar una mano: entra grande y se
-   asienta, para que se vea que ha salido algo nuevo abajo. */
-@keyframes creceYCae{
-  0%  {opacity:0;transform:scale(.7)}
-  55% {opacity:1;transform:scale(1.14)}
-  100%{opacity:1;transform:scale(1)}
+/* "Revisar la mano" respira mientras esta ahi. Una sola sacudida al aparecer se
+   perdia si en ese momento estabas mirando el marcador; esto sigue llamando
+   hasta que se toca. Suave y lento a proposito: es un aviso, no una alarma. */
+@keyframes respira{
+  0%, 100%{transform:scale(1)}
+  50%     {transform:scale(1.10)}
 }
 .anim-izq   > *{animation:entraIzq   .26s cubic-bezier(.2,.8,.2,1) both}
 .anim-der   > *{animation:entraDer   .26s cubic-bezier(.2,.8,.2,1) both}
@@ -131,7 +131,9 @@ button{border:0;background:none;cursor:pointer}
 .anim-baja     {animation:bajaBloque  .24s cubic-bezier(.2,.8,.2,1) both}
 .erow.entra    {animation:entraFila   .28s cubic-bezier(.2,.8,.2,1) both}
 .score.baja    {animation:bajaCifra   .30s cubic-bezier(.2,.8,.2,1) both}
-.anim-crece    {animation:creceYCae   .42s cubic-bezier(.2,.8,.2,1) both}
+/* Cuelga de .result y no de una clase que se pone y se quita: mientras el boton
+   exista, hay algo que revisar, y ese es justo el rato en que tiene que llamar. */
+.result        {animation:respira     2.1s ease-in-out infinite}
 /* ---- de lado ----
    La app se diseñó de pie y el bloqueo del manifest lo daba por hecho. De tres
    hay tres columnas y girar el teléfono es lo que más ayuda, así que el bloqueo
@@ -181,7 +183,7 @@ button{border:0;background:none;cursor:pointer}
 [data-style="mono"] .anim-baja,
 [data-style="mono"] .erow.entra,
 [data-style="mono"] .score.baja,
-[data-style="mono"] .anim-crece{animation:none}
+[data-style="mono"] .result{animation:none}
 
 /* ---------- barra superior ---------- */
 .top{display:flex;align-items:center;gap:6px;padding:10px 12px 4px;min-height:52px}
@@ -663,6 +665,10 @@ button{border:0;background:none;cursor:pointer}
 
 /* grupos de botones (presets y tema) */
 .seg{display:flex;gap:8px;margin-top:10px}
+/* Con cuatro no caben a la talla de tres: encogen letra y hueco antes que
+   partirse en dos filas, que es lo que peor se lee de un vistazo. */
+.seg.cuatro{gap:6px}
+.seg.cuatro button{padding:11px 4px;font-size:12.5px;border-radius:12px}
 .seg button{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
   padding:12px 8px;border-radius:14px;border:1px solid var(--line);
   font-size:14px;font-weight:600;color:var(--dim);font-variant-numeric:tabular-nums}
@@ -1480,6 +1486,18 @@ button{border:0;background:none;cursor:pointer}
         <p class="cfg-hint" id="upd-ver"></p>
       </div>
 
+      <!-- Va justo ANTES de la zona de peligro: es lo que hay que hacer antes
+           de borrar nada, y ahi es donde se mira cuando se va a tocar algo. -->
+      <div id="cfg-sec-copia">
+        <div class="cfg-lbl">Copia de seguridad</div>
+        <p class="cfg-hint" style="margin-top:0">Todo esto vive solo en este teléfono.
+          Lo que lleva ganado cada uno no se puede recuperar de ninguna parte.</p>
+        <button class="reg-ok" id="btn-copia">Guardar una copia</button>
+        <button class="linky" id="btn-restaurar">Restaurar una copia…</button>
+        <input type="file" id="copia-file" accept="application/json,.json" hidden>
+        <p class="cfg-hint" id="copia-hint"></p>
+      </div>
+
       <!-- Se marca lo que se quiere borrar, en vez de un botón que lo tira todo.
            Sirve para dos cosas: borrar solo una parte, y que dejar la app en
            blanco cueste marcar seis casillas en vez de un toque. -->
@@ -1939,7 +1957,7 @@ let filaNueva = -1;
 
 /* Una animación de entrada, una vez. No persiste ni se guarda en el estado: se
    pone, se deja correr y se quita, para que el siguiente repintado no la repita. */
-const ANIMS = ['anim-izq', 'anim-der', 'anim-abajo', 'anim-fade', 'anim-baja', 'anim-crece'];
+const ANIMS = ['anim-izq', 'anim-der', 'anim-abajo', 'anim-fade', 'anim-baja'];
 /* Dos caminos, y se prueba el bueno primero:
    1. Girar DE VERDAD, con pantalla completa y bloqueo de orientación. Es lo
       correcto —el teclado sale bien, nada va falseado— pero pide pantalla
@@ -2070,7 +2088,10 @@ function apuntarPareja(ids, gano, signo) {
    cualquier umbral razonable. */
 function contarAparicion() {
   const m = S.mesa;
-  if (!m || m.contada || !grupoCompleto(m.ids)) return;
+  /* Por mesaGrabable y no por "los cuatro": un trio que se junta cada semana es
+     tan costumbre como un cuarteto, y desde que el registro guarda de cuantos
+     era se puede recuperar sin perder a nadie. */
+  if (!m || m.contada || !mesaGrabable(m)) return;
   const clave = claveGrupo(m.ids), ahora = Date.now();
   let g = S.grupos.find(x => x.clave === clave);
 
@@ -2086,7 +2107,9 @@ function contarAparicion() {
       S.grupos.splice(peor, 1);
     }
     g = { id: nuevoId('g'), nombre: '', clave, ids: [...m.ids],
-          nombres: [teamName(0), teamName(1)], accents: [...S.accents],
+          // de cuantos era: sin esto, al recuperarlo armaria una mesa de cuatro
+          cuantos: mesaCuantos(m),
+          nombres: cadaEq().map(t => teamName(t)), accents: [...S.accents],
           mode: S.mode, target: S.target,
           origen: 'auto', estado: 'tanteo', veces: 0, primera: ahora, ultima: 0 };
     S.grupos.push(g);
@@ -2095,6 +2118,7 @@ function contarAparicion() {
   if (!g.ultima || dayKey(new Date(ahora)) !== dayKey(new Date(g.ultima))) g.veces++;
   g.ultima = ahora;
   g.ids = [...m.ids];        // el grupo recuerda cómo se sentaron la última vez
+  g.cuantos = mesaCuantos(m);  // y de cuántos jugaron la última vez
   m.contada = true;
   m.grupo = g.id;
 }
@@ -2143,7 +2167,9 @@ async function ofrecerGrupo() {
     if (si) {
       Object.assign(g, {
         estado: 'activo',
-        nombres: [teamName(0), teamName(1)],
+        // tantos nombres como columnas: un trio son tres, no dos
+        nombres: cadaEq().map(t => teamName(t)),
+        cuantos: mesaCuantos(S.mesa),
         accents: [...S.accents],
         mode: g.mode || S.mode || 'dom',
         target: g.target || MODES[g.mode || S.mode || 'dom'].target
@@ -2523,11 +2549,9 @@ function render() {
 
   // con la mano cerrada y el resultado ya cerrado, dejar volver a él
   const hayResultado = S.over >= 0 && winSeen;
-  /* Solo la primera vez que aparece: repetirlo en cada repintado —abrir un
-     menú, cambiar de tema— seria un tic, igual que la fila del log. */
-  const antesResult = !$('#btn-result').hidden;
+  /* No hace falta dispararla: respira sola mientras esté a la vista, y a la
+     vista está exactamente cuando hay una mano que revisar. */
   $('#btn-result').hidden = !hayResultado;
-  if (hayResultado && !antesResult) animar('#btn-result', 'anim-crece');
   $('#foot').hidden = !hayResultado;      // sin nada dentro, el pie sobra
   root.style.setProperty('--wc', S.over === 1 ? 'var(--b)' : 'var(--a)');
 
@@ -2782,10 +2806,11 @@ function renderLanzador() {
 function renderGrupoChips() {
   const m = S.mesa;
   const yaEsGrupo = m && gruposActivos().some(g => g.clave === claveGrupo(m.ids));
-  const ofrecer = m && m.cerrada && grupoCompleto(m.ids) && !yaEsGrupo && puedeFormal();
+  const ofrecer = m && m.cerrada && mesaGrabable(m) && !yaEsGrupo && puedeFormal();
   $('#grupo-chips').innerHTML = !ofrecer ? '' :
     `<button class="gchip" data-seguir="1">
-      <span class="gpar"><i style="--c:${colorDe(S.accents[0])}"></i><i style="--c:${colorDe(S.accents[1])}"></i></span>
+      <span class="gpar">${cadaEq().map(t =>
+        `<i style="--c:${colorDe(S.accents[t])}"></i>`).join('')}</span>
       <span class="gtxt">
         <span class="gnom">Seguir con ${escapa(m.ids.map(nombreDeId).filter(Boolean).join(', '))}</span>
         <span class="gsub">La última mesa</span>
@@ -3214,7 +3239,12 @@ const fmtWhen = ts => {
 };
 
 // El modo ya no se escribe: se pinta su ficha, igual que en la barra del tablero.
-const HVIEWS = [['detalle','Detalle'], ['lista','Lista'], ['pastillas','Pastillas']];
+/* Las tres primeras enseñan las manos de una forma u otra; la cuarta no enseña
+   manos, enseña las cuentas. Va con ellas porque es el mismo gesto: elegir cómo
+   se mira hacia atrás. */
+const HVIEWS = [['detalle','Detalle'], ['lista','Lista'],
+                ['pastillas','Pastillas'], ['resumen','Resumen']];
+const esResumen = v => v === 'resumen';
 /* Cada mano lleva SUS colores congelados. Antes las filas usaban .t0/.t1, que
    apuntan a --a y --b: al sentarse otra gente con otros colores, el historial
    entero se repintaba y una mano de hace tres días cambiaba de color sola.
@@ -3402,6 +3432,32 @@ function rehacerMano(i) {
 /* Con cuatro manos juntas o más. Con una o dos el porcentaje es ruido y la
    lista se llena de gente que coincidió un día. */
 const PAREJA_MIN = 4;
+/* La misma vara para las personas que para las parejas, a proposito: con una o
+   dos manos el porcentaje es ruido, y que las dos listas aparezcan a la vez
+   ahorra tener que explicar por que sale una y la otra no. */
+const MANOS_MIN = PAREJA_MIN;
+
+/* Lo que lleva cada uno. Sale de sus contadores durables, no de recorrer el
+   historial: ese es una ventana de 400 manos, asi que a partir de ahi empezaria
+   a quedarse corto y lo perdido no vuelve. Cuenta TODO — de dos, de tres y de
+   cuatro—, que es lo que la lista de parejas no puede hacer. */
+function cadaUnoHTML() {
+  const filas = jugadoresVivos()
+    .map(j => ({ nombre: j.nombre, j: j.manos || 0, g: j.ganadas || 0 }))
+    .filter(p => p.j >= MANOS_MIN)
+    .sort((x, y) => (y.g / y.j) - (x.g / x.j) || y.j - x.j);
+  if (!filas.length) return '';
+  return `<div>
+      <div class="cfg-lbl">Cada uno</div>
+      <div class="stat-card">
+        ${filas.map(p => `<div class="stat-row">
+          <span class="k">${escapa(p.nombre)}</span>
+          <span class="v"><span class="marca">${p.g} de ${p.j}</span
+            >${Math.round(p.g / p.j * 100)}%</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+}
 
 function parejasHTML() {
   const filas = Object.entries(S.parejas || {})
@@ -3453,24 +3509,14 @@ function renderStats() {
   const yo = anotadorJugador();
 
   // el indice del registro viaja con la fila: la lista va del reves
-  const manos = h.map((r, i) => ({ r, i })).reverse()
+  const manos = esResumen(vista) ? '' : h.map((r, i) => ({ r, i })).reverse()
     .map(({ r, i }) => manoHTML(r, vista, i)).join('');
   // las pastillas van sueltas en rejilla; las otras dos, dentro de una tarjeta
   const lista = vista === 'pastillas'
     ? `<div class="hpills">${manos}</div>`
     : `<div class="stat-card">${manos}</div>`;
 
-  // El resumen se va al final: lo que se viene a ver son las manos.
-  $('#stats-body').innerHTML = `
-    <div>
-      <div class="cfg-lbl">Manos · de la más reciente</div>
-      <div class="seg">
-        ${HVIEWS.map(([k, txt]) =>
-          `<button data-hview="${k}" aria-checked="${k === vista}">${txt}</button>`).join('')}
-      </div>
-      <div style="margin-top:12px">${lista}</div>
-    </div>
-    <div>
+  const cuentas = `<div>
       <div class="cfg-lbl">Resumen</div>
       <div class="stat-card">
         ${row('Manos guardadas', h.length)}
@@ -3480,7 +3526,20 @@ function renderStats() {
         ${yo ? row('Ganadas por ti', yo.ganadas || 0) : ''}
       </div>
     </div>
+    ${cadaUnoHTML()}
     ${parejasHTML()}`;
+
+  /* El rotulo dice lo que hay debajo, que ya no es siempre lo mismo. */
+  $('#stats-body').innerHTML = `
+    <div>
+      <div class="cfg-lbl">${esResumen(vista) ? 'Cómo va la cosa' : 'Manos · de la más reciente'}</div>
+      <div class="seg cuatro">
+        ${HVIEWS.map(([k, txt]) =>
+          `<button data-hview="${k}" aria-checked="${k === vista}">${txt}</button>`).join('')}
+      </div>
+      <div style="margin-top:12px">${esResumen(vista) ? '' : lista}</div>
+    </div>
+    ${esResumen(vista) ? cuentas : ''}`;
 }
 
 /* ============================================================
@@ -3749,6 +3808,70 @@ $('#pad').addEventListener('click', e => {
    ============================================================ */
 // checkLabel: si se pasa, sale una casilla y el botón no se activa hasta marcarla.
 // Es para lo que no se puede deshacer, donde un "Sí" de reflejo sale caro.
+/* La copia lleva sobre: sirve para reconocerla al restaurar y para no tragarse
+   un JSON cualquiera que alguien elija por error. */
+/* El unico sitio que recarga. Recargar no es un efecto suelto: pasa cuando se
+   restaura una copia, cuando se reinstala y cuando entra una version que
+   estaba esperando — y siempre porque alguien lo pidio. */
+function recargar() { location.reload(); }
+
+const SOBRE = 'tranque';
+
+function guardarCopia() {
+  const bulto = { app: SOBRE, fecha: new Date().toISOString(),
+                  ver: S.lastVer || '', estado: S };
+  const texto = JSON.stringify(bulto);
+  const d = new Date();
+  const dosdig = n => String(n).padStart(2, '0');
+  const nombre = `tranque-${d.getFullYear()}-${dosdig(d.getMonth() + 1)}-${dosdig(d.getDate())}.json`;
+  try {
+    const url = URL.createObjectURL(new Blob([texto], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = nombre;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    buzz(10);
+    $('#copia-hint').textContent = `Guardada como ${nombre}. Ponla donde no se pierda con el teléfono.`;
+  } catch {
+    /* Si el navegador no deja bajar el archivo, al menos que se pueda pegar en
+       cualquier sitio: perder los datos es peor que un camino feo. */
+    navigator.clipboard && navigator.clipboard.writeText(texto)
+      .then(() => { $('#copia-hint').textContent = 'Copiada. Pégala donde quieras guardarla.'; })
+      .catch(() => { $('#copia-hint').textContent = 'No se pudo guardar la copia.'; });
+  }
+}
+
+/* Restaurar PISA todo lo que hay, asi que se lee y se comprueba antes de tocar
+   nada. Y se escribe en el almacen y se recarga en vez de meterlo en S a mano:
+   asi la copia pasa por load(), que es quien sabe migrar una copia vieja. */
+async function restaurarCopia(texto) {
+  let bulto;
+  try { bulto = JSON.parse(texto); } catch { bulto = null; }
+  const est = bulto && (bulto.app === SOBRE ? bulto.estado : bulto);
+  const vale = est && typeof est === 'object' &&
+    (Array.isArray(est.history) || Array.isArray(est.jugadores) || Array.isArray(est.rounds));
+  if (!vale) {
+    buzz([16, 55, 16]);
+    $('#copia-hint').textContent = 'Ese archivo no es una copia de Tranque.';
+    return;
+  }
+  const manos = (est.history || []).length, gente = (est.jugadores || []).length;
+  const cuando = bulto && bulto.fecha ? new Date(bulto.fecha).toLocaleDateString() : '';
+  const si = await ask('Restaurar la copia',
+    `Trae ${manos} mano${manos === 1 ? '' : 's'} y ${gente} jugador${gente === 1 ? '' : 'es'}` +
+    (cuando ? `, del ${cuando}` : '') +
+    '. Se queda con eso y se pierde todo lo que hay ahora en este teléfono.',
+    'Restaurar', true, 'Sí, pisar lo de ahora');
+  if (!si) return;
+  try {
+    localStorage.setItem(KEY, JSON.stringify(est));
+  } catch {
+    $('#copia-hint').textContent = 'No cupo: la copia es demasiado grande.';
+    return;
+  }
+  recargar();
+}
+
 function ask(title, msg, okLabel = 'Sí', danger = false, checkLabel = '', noLabel = 'Cancelar') {
   return new Promise(resolve => {
     const yes = $('#ask-yes'), no = $('#ask-no'), chk = $('#ask-check');
@@ -4110,6 +4233,16 @@ $('#jug-nombres').addEventListener('change', e => {
 
 /* Borrado por partes. Marcar y luego confirmar: así se puede tirar solo una
    cosa, y dejar la app en blanco cuesta marcar las seis casillas. */
+$('#btn-copia').addEventListener('click', guardarCopia);
+$('#btn-restaurar').addEventListener('click', () => { $('#copia-file').value = ''; $('#copia-file').click(); });
+$('#copia-file').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  const lector = new FileReader();
+  lector.onload = () => restaurarCopia(String(lector.result || ''));
+  lector.onerror = () => { $('#copia-hint').textContent = 'No se pudo leer el archivo.'; };
+  lector.readAsText(f);
+});
+
 $('#btn-borrar-abrir').addEventListener('click', () => {
   borrarAbierto = true; buzz(8); renderBorrar();
 });
@@ -4648,7 +4781,7 @@ async function reinstalar() {
       await Promise.all(keys.map(k => caches.delete(k)));
     }
   } catch {}
-  location.reload();
+  recargar();
 }
 
 // Le pregunta al service worker qué versión está sirviendo de verdad.
@@ -4778,7 +4911,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!applying) return;    // solo recargamos si lo pidió el usuario
     applying = false;
-    location.reload();
+    recargar();
   });
 }
 
