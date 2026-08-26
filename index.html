@@ -115,6 +115,13 @@ button{border:0;background:none;cursor:pointer}
 @keyframes entraFila {from{opacity:0;transform:translateY(-80%)}}
 @keyframes bajaCifra {from{opacity:.25;transform:translateY(-12%)}}
 @keyframes bajaBloque{from{opacity:0;transform:translateY(-9px)}}
+/* "Revisar la mano" aparece de golpe al acabar una mano: entra grande y se
+   asienta, para que se vea que ha salido algo nuevo abajo. */
+@keyframes creceYCae{
+  0%  {opacity:0;transform:scale(.7)}
+  55% {opacity:1;transform:scale(1.14)}
+  100%{opacity:1;transform:scale(1)}
+}
 .anim-izq   > *{animation:entraIzq   .26s cubic-bezier(.2,.8,.2,1) both}
 .anim-der   > *{animation:entraDer   .26s cubic-bezier(.2,.8,.2,1) both}
 .anim-abajo > *{animation:entraAbajo .24s cubic-bezier(.2,.8,.2,1) both}
@@ -122,6 +129,7 @@ button{border:0;background:none;cursor:pointer}
 .anim-baja     {animation:bajaBloque  .24s cubic-bezier(.2,.8,.2,1) both}
 .erow.entra    {animation:entraFila   .28s cubic-bezier(.2,.8,.2,1) both}
 .score.baja    {animation:bajaCifra   .30s cubic-bezier(.2,.8,.2,1) both}
+.anim-crece    {animation:creceYCae   .42s cubic-bezier(.2,.8,.2,1) both}
 /* ---- de lado ----
    La app se diseñó de pie y el bloqueo del manifest lo daba por hecho. De tres
    hay tres columnas y girar el teléfono es lo que más ayuda, así que el bloqueo
@@ -170,7 +178,8 @@ button{border:0;background:none;cursor:pointer}
 [data-style="mono"] .anim-fade,
 [data-style="mono"] .anim-baja,
 [data-style="mono"] .erow.entra,
-[data-style="mono"] .score.baja{animation:none}
+[data-style="mono"] .score.baja,
+[data-style="mono"] .anim-crece{animation:none}
 
 /* ---------- barra superior ---------- */
 .top{display:flex;align-items:center;gap:6px;padding:10px 12px 4px;min-height:52px}
@@ -794,6 +803,23 @@ button{border:0;background:none;cursor:pointer}
 /* .menu button trae su propio display: sin esto, el hidden del navegador no
    esconde nada. Es la sexta vez que muerde esta misma trampa. */
 .menu button[hidden], .menu .sep[hidden]{display:none}
+
+/* El botón de acostar: flota abajo a la derecha, por debajo de todo lo que se
+   abre encima (el teclado es z-index 21) porque además se esconde con ello. */
+.fab{position:fixed;z-index:19;
+  right:calc(14px + env(safe-area-inset-right));
+  bottom:calc(14px + env(safe-area-inset-bottom));
+  width:46px;height:46px;border-radius:50%;
+  display:grid;place-items:center;
+  background:var(--elev);border:1px solid var(--line);box-shadow:var(--shadow);
+  color:var(--dim);transition:transform .12s ease}
+/* .fab trae su propio display: sin esto el hidden del navegador no lo esconde */
+.fab[hidden]{display:none}
+.fab:active{transform:scale(.9)}
+.fab svg{width:22px;height:22px;fill:none;stroke:currentColor;
+  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* acostada, el botón dice que lo está: es el mismo botón el que la levanta */
+[data-acostado="1"] .fab, .fab.on{color:var(--ok);border-color:var(--ok)}
 /* segunda línea de la opción: dice qué hace, o por qué no se puede ahora */
 .menu .mi{display:flex;flex-direction:column;gap:2px;text-align:left}
 .menu .mi i{font-style:normal;font-size:11.5px;font-weight:500;color:var(--dim);line-height:1.25}
@@ -1125,8 +1151,16 @@ button{border:0;background:none;cursor:pointer}
         </div>
         <div class="mesa-cap" id="mesa-cap"></div>
 
-        <!-- Debajo de la mesa a propósito: aparece al elegir Por manos, y
-             puesto arriba empujaba la mesa justo cuando se acababa de tocar. -->
+        <!-- Debajo de la mesa a propósito: aparecen al elegir el modo, y puestos
+             arriba empujaban la mesa justo cuando se acababa de tocar. -->
+        <div id="mesa-tope" style="margin-top:22px" hidden>
+          <div class="cfg-lbl">¿Hasta cuántos puntos?</div>
+          <div class="stepper">
+            <button data-tope-paso="-25" id="mesa-tope-menos" aria-label="Menos veinticinco">−</button>
+            <span class="val" id="mesa-tope-val">200</span>
+            <button data-tope-paso="25" id="mesa-tope-mas" aria-label="Más veinticinco">+</button>
+          </div>
+        </div>
         <div id="mesa-mejor" style="margin-top:22px" hidden>
           <div class="cfg-lbl">¿Hasta la cuánta?</div>
           <div class="stepper">
@@ -1468,11 +1502,6 @@ button{border:0;background:none;cursor:pointer}
 
 <!-- menú de opciones -->
 <div class="menu" id="menu">
-  <!-- Solo en teléfono: en un ordenador la pantalla ya está acostada. -->
-  <button id="mi-acostar" hidden>
-    <svg viewBox="0 0 24 24"><rect x="2.5" y="6.5" width="19" height="11" rx="2.2"/><path d="M17.5 3.5l3 3-3 3"/></svg>
-    <span class="mi">Acostar la pantalla<i></i></span></button>
-  <div class="sep" id="sep-acostar" hidden></div>
   <div class="lbl">Estilo</div>
   <button data-set-style="chercha">
     <svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-2.9-.4L3.5 21l1.6-4.6A8.3 8.3 0 0 1 3.6 11.5 8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/></svg>
@@ -1504,6 +1533,12 @@ button{border:0;background:none;cursor:pointer}
 </div>
 
 <!-- reacción a pantalla completa (¡Lisa!) -->
+<!-- Acostar la pantalla. Flota abajo a la derecha y se esconde en cuanto algo
+     se abre encima: el teclado de puntos sube desde ahí mismo. -->
+<button class="fab" id="btn-acostar" hidden aria-label="Acostar la pantalla">
+  <svg viewBox="0 0 24 24"><rect x="2.5" y="6.5" width="19" height="11" rx="2.2"/><path d="M17.5 3.5l3 3-3 3"/></svg>
+</button>
+
 <div class="fxfull" id="fxfull"></div>
 
 <!-- aviso breve, por ahora solo para decir que entró una versión nueva -->
@@ -1891,7 +1926,7 @@ let filaNueva = -1;
 
 /* Una animación de entrada, una vez. No persiste ni se guarda en el estado: se
    pone, se deja correr y se quita, para que el siguiente repintado no la repita. */
-const ANIMS = ['anim-izq', 'anim-der', 'anim-abajo', 'anim-fade', 'anim-baja'];
+const ANIMS = ['anim-izq', 'anim-der', 'anim-abajo', 'anim-fade', 'anim-baja', 'anim-crece'];
 /* Dos caminos, y se prueba el bueno primero:
    1. Girar DE VERDAD, con pantalla completa y bloqueo de orientación. Es lo
       correcto —el teclado sale bien, nada va falseado— pero pide pantalla
@@ -2203,6 +2238,22 @@ function react(team, text) {
    tocar nada: ganar la tanda sin dejarle ganar una sola mano. */
 /* Lisa es ganar sin que anotara NADIE más. Con dos era mirar al otro; de tres
    hay que mirar a los dos, o se canta lisa con uno de ellos con puntos. */
+/* Quién ganó, dicho para que suene. Con jugadores son personas y el verbo va
+   detrás: "Elvin y Danny han ganado". En Blitz es el nombre de un equipo, y ahí
+   "Nosotros han ganado" chirría — son pronombres, así que el verbo concuerda
+   con ellos. Un nombre puesto a mano vuelve al orden normal. */
+function cantoGanador(t) {
+  /* Por conMesa() y no por si hay S.mesa: en Blitz la mesa anterior sigue
+     guardada para el "Seguir con..." del lanzador, y sin esto se cantaba con
+     los jugadores de una partida que ya no se esta jugando. */
+  const quienes = conMesa() ? idsEquipo(t, (S.mesa || {}).ids) : [];
+  if (quienes.length) return `¡${teamName(t)} ${quienes.length === 1 ? 'ha' : 'han'} ganado!`;
+  const n = teamName(t);
+  if (n === DEFAULT_NAMES[0]) return '¡Ganamos!';
+  if (n === DEFAULT_NAMES[1]) return '¡Ganaron!';
+  return `¡Ganó ${n}!`;
+}
+
 const isLisa = () => S.over >= 0 &&
   cadaEq().every(t => t === S.over || !S.scores[t]);
 
@@ -2304,12 +2355,17 @@ function render() {
      el <body> y no solo la app. */
   root.dataset.acostado = acostado === 'css' ? '1' : '';
   root.dataset.apaisado = apaisado() ? '1' : '';
-  const enTel = esTelefono();
-  $('#mi-acostar').hidden = !enTel;
-  $('#sep-acostar').hidden = !enTel;
-  $('#mi-acostar i').textContent = acostado ? 'Tocar otra vez para levantarla' : '';
-  $('#mi-acostar span.mi').firstChild.textContent =
-    acostado ? 'Levantar la pantalla' : 'Acostar la pantalla';
+  /* Solo en teléfono, y solo cuando no hay nada abierto encima: el teclado sube
+     justo desde donde está, y taparlo seria peor que no tenerlo. En la puerta
+     del registro tampoco, que ahí no hay app todavía. Se mira S.anotador y no
+     la variable registrado, que se declara más abajo en esta misma función. */
+  /* No hace falta esconderlo cuando algo se abre encima: el teclado (21), los
+     diálogos (40) y el ganador van por delante en z-index y ya lo tapan. Y
+     esconderlo dependería de repintar en cada apertura, que no siempre pasa. */
+  const fab = $('#btn-acostar');
+  fab.hidden = !esTelefono() || S.anotador === null;
+  fab.classList.toggle('on', !!acostado);
+  fab.setAttribute('aria-label', acostado ? 'Levantar la pantalla' : 'Acostar la pantalla');
   $$('[data-set-style]').forEach(b => b.setAttribute('aria-checked', b.dataset.setStyle === S.style));
   $$('[data-set-theme]').forEach(b => b.setAttribute('aria-checked', b.dataset.setTheme === S.theme));
 
@@ -2454,7 +2510,11 @@ function render() {
 
   // con la mano cerrada y el resultado ya cerrado, dejar volver a él
   const hayResultado = S.over >= 0 && winSeen;
+  /* Solo la primera vez que aparece: repetirlo en cada repintado —abrir un
+     menú, cambiar de tema— seria un tic, igual que la fila del log. */
+  const antesResult = !$('#btn-result').hidden;
   $('#btn-result').hidden = !hayResultado;
+  if (hayResultado && !antesResult) animar('#btn-result', 'anim-crece');
   $('#foot').hidden = !hayResultado;      // sin nada dentro, el pie sobra
   root.style.setProperty('--wc', S.over === 1 ? 'var(--b)' : 'var(--a)');
 
@@ -2629,6 +2689,19 @@ const cuantaTxt = v => `${v}/${Math.floor(v / 2) + 1}`;
 /* El tope de la partida: puntos si se anotan, manos si se juega por manos. Se
    aplica al empezar, que es lo único que hace distinto a Por manos. */
 const topeDeJuego = () => porManos() ? paraGanar() : MODES[S.mode || 'dom'].target;
+/* El tope de la mesa que se está armando. Todavía no hay S.mode —el modo vive
+   en la mesa hasta que se empieza—, así que sale de ahí. */
+const topeMesa = m => {
+  const M = MODES[(m && m.modo) || 'dom'];
+  const v = +((m || {}).tope);
+  return (v >= TARGET_MIN && v <= TARGET_MAX) ? v : M.target;
+};
+function pasoTope(paso) {
+  const m = S.mesa; if (!m || mesaPorManos(m)) return;
+  const v = Math.max(TARGET_MIN, Math.min(TARGET_MAX, topeMesa(m) + paso));
+  if (v === topeMesa(m)) return;
+  m.tope = v; buzz(6); save(); refrescarMesa();
+}
 /* Las manos ganadas, a rayas: cuatro palos y el quinto cruzándolos, igual que
    el icono del modo. Los grupos de cinco se apilan uno encima de otro en vez de
    seguir a lo ancho — a lo ancho se saldrían de la columna del equipo.
@@ -2736,6 +2809,8 @@ function renderMesa() {
   // de cuántas manos solo tiene sentido jugando por manos. Va aquí y no en
   // refrescarMesa: esa no llega a correr cuando se ofrecen juegos guardados.
   $('#mesa-mejor').hidden = !mesaPorManos(S.mesa);
+  // los dos modos de puntos eligen a cuántos se juega, como por manos elige la tanda
+  $('#mesa-tope').hidden = mesaPorManos(S.mesa);
   if (!armando) {
     $('#mesa-gchips').innerHTML = guardados.map(chipGrupoHTML).join('');
     return;
@@ -2816,6 +2891,12 @@ function refrescarMesa() {
   const puestos = m.ids.filter(Boolean);
 
   pintarMejor('#mesa-mejor-val', '#mesa-mejor-menos', '#mesa-mejor-mas');
+  if (!mesaPorManos(m)) {
+    const tope = topeMesa(m);
+    $('#mesa-tope-val').textContent = tope;
+    $('#mesa-tope-menos').disabled = tope <= TARGET_MIN;
+    $('#mesa-tope-mas').disabled   = tope >= TARGET_MAX;
+  }
   $$('[data-cuantos]').forEach(b =>
     b.setAttribute('aria-checked', +b.dataset.cuantos === mesaCuantos(m)));
   $$('[data-yojuego]').forEach(b =>
@@ -3459,7 +3540,11 @@ function addRound(team, pts, pase = 0, capi = false, tran = false) {
   save(); render();                      // pintar antes: la reacción usa --wc ya puesto
   if (S.over === team) {                 // ganar manda: una sola reacción
     buzz([18, 60, 18, 60, 40]);
+    /* La lisa se lleva el cartel cuando la hay: es lo más gordo que puede pasar.
+       Si no, se cantan los nombres — con jugadores son las personas, y en Blitz
+       el nombre del equipo, que es lo único que se sabe de ellos. */
     if (isLisa()) bigReact(cantoLisa());
+    else bigReact(cantoGanador(team), team);
   } else {
     reactTo(team, pts, capi, pase);
   }
@@ -3888,6 +3973,11 @@ $('#mesa-quien').addEventListener('click', e => {
 
 /* Escucha en su propio bloque y no en el de al lado: colgaba de #mesa-quien y
    bajarlo debajo de la mesa lo dejó sordo, sin dar ningún error. */
+$('#mesa-tope').addEventListener('click', e => {
+  const b = e.target.closest('[data-tope-paso]'); if (!b) return;
+  pasoTope(+b.dataset.topePaso);
+});
+
 $('#mesa-mejor').addEventListener('click', e => {
   const b = e.target.closest('[data-mejor-paso]'); if (!b) return;
   pasoMejor(+b.dataset.mejorPaso);
@@ -3964,7 +4054,7 @@ $('#jug-extra-btn').addEventListener('click', () => {
 
 /* Los jugadores solo existen en Formal, y Formal necesita un nombre. Cada
    "no se puede" dice lo que falta para poder. */
-$('#mi-acostar').addEventListener('click', () => { menu.classList.remove('on'); acostar(); });
+$('#btn-acostar').addEventListener('click', acostar);
 
 $('#btn-cuanta').addEventListener('click', () => {
   cuantaAbierta = !cuantaAbierta; buzz(8); render();
@@ -4037,6 +4127,8 @@ $('#mesa-equipos').addEventListener('change', () => save());
 function ponerModoMesa(k) {
   const m = S.mesa; if (!m || !MODES[k] || m.modo === k) return;   // tocar el que ya está no es un cambio
   m.modo = k;
+  delete m.tope;      // cada modo trae los suyos; se vuelve a los de este
+
   buzz(10); save(); renderMesa();
   /* Solo se funde lo que el modo cambia: la ficha del centro, el pie que lo
      nombra y el "¿hasta la cuánta?" que solo existe jugando por manos. */
@@ -4080,7 +4172,8 @@ $('#mesa-ok').addEventListener('click', () => {
   nuevaTanda(identFormal(m.ids));   // gente nueva en la mesa, cuenta nueva
   guardarColores(S.ident, S.accents);   // con los colores que se acaban de elegir
   S.mode   = m.modo || 'dom';
-  S.target = topeDeJuego();
+  // lo elegido al armar la mesa manda sobre lo que trae el modo de fábrica
+  S.target = porManos() ? topeDeJuego() : topeMesa(m);
   animar('#sc-game', 'anim-abajo');
   view = 'game';
   recount();
@@ -4316,6 +4409,12 @@ document.addEventListener('visibilitychange', () => {
 });
 /* Girar el teléfono no cambia el estado, pero sí lo que cabe: hay que volver a
    mirar si está acostada. */
+/* Salir de la app suelta la pantalla completa, y con ella el giro: lo deshace
+   el sistema por su cuenta. Sin enterarnos, el boton seguia diciendo "levantar
+   la pantalla" y no habia nada que levantar. */
+document.addEventListener('fullscreenchange', () => {
+  if (acostado === 'real' && !document.fullscreenElement) { acostado = false; render(); }
+});
 addEventListener('orientationchange', () => setTimeout(render, 120));
 addEventListener('resize', () => {
   // root es local de render(): aqui hay que pedirlo otra vez
