@@ -89,7 +89,9 @@ button{border:0;background:none;cursor:pointer}
   position:fixed;top:0;left:0;
   width:100vh;height:100vw;
   transform-origin:top left;
-  transform:rotate(90deg) translateY(-100vh);
+  /* -100% y no -100vh: el porcentaje se mide contra el ALTO de esta misma caja
+     (que aquí vale 100vw). Con -100vh la caja se iba a la derecha del borde. */
+  transform:rotate(90deg) translateY(-100%);
   overflow:hidden}
 #app{height:100%;display:flex;flex-direction:column;
   padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
@@ -3216,9 +3218,15 @@ const colorMano = (r, t) => colorDe((r.accents || S.accents)[t]);
    es "Papo y Tita" salvo que le hayan puesto uno propio, así que repetirlo
    debajo parecería un fallo antes que un dato. */
 const parejaMano = (r, t) => r.mesa ? nombreDerivado(t, r.mesa, manoTres(r)) : '';
+/* Quiénes jugaron esa columna, DEBAJO del nombre del equipo. Si el nombre del
+   equipo ya es el de ellos —que es lo que pasa por defecto, porque sale de
+   quién está sentado— no se repite: solo aporta cuando alguien le puso al
+   equipo un nombre propio. Se compara sin tildes ni mayúsculas, que es como se
+   escriben los nombres de verdad. */
 const jugadoresHTML = (r, t) => {
   const p = parejaMano(r, t);
-  return p ? `<i class="hjug">${escapa(p)}</i>` : '';
+  if (!p || pelado(p) === pelado(teamName(t, r.names))) return '';
+  return `<i class="hjug">${escapa(p)}</i>`;
 };
 
 /* Cómo se jugó esa mano. Sale de la identidad congelada en el registro, que ya
@@ -3283,9 +3291,9 @@ function manoHTML(r, vista, idx) {
       ${marcador(r)}
       <div class="hteams">${noms.map((nm, t) => `<span class="hcol">` +
         (t === r.w
-          ? `<span class="hteam win" style="color:${colorMano(r, t)}">${nm}</span>`
-          : `<span class="hteam">${nm}</span>`) +
-        (eq.length === 3 ? '' : jugadoresHTML(r, t)) + `</span>`).join('<span class="hvs">·</span>')}</div>
+          ? `<span class="hteam win" style="color:${colorMano(r, t)}">${escapa(nm)}</span>`
+          : `<span class="hteam">${escapa(nm)}</span>`) +
+        jugadoresHTML(r, t) + `</span>`).join('<span class="hvs">·</span>')}</div>
     </div>
   </div>`;
 }
@@ -3320,9 +3328,13 @@ function abrirMano(i) {
                   r.manos ? cuantaTxt(r.mejor || 5) : r.target));
   /* De tres, cada columna es una persona y su nombre YA es el de la fila: no
      hace falta repetirlo debajo de sí mismo. */
-  if (r.mesa && !manoTres(r)) eq.forEach(t => {
-    const p = idsEquipo(t, r.mesa, false).map(nombreDeId).filter(Boolean);
-    if (p.length) filas.push(fila(escapa(teamName(t, r.names)), escapa(p.join(' y '))));
+  /* Quién jugó cada columna. Si el nombre del equipo ya es el de ellos, la fila
+     diría lo mismo dos veces y no se pone. */
+  if (r.mesa) eq.forEach(t => {
+    const p = idsEquipo(t, r.mesa, manoTres(r)).map(nombreDeId).filter(Boolean);
+    if (!p.length) return;
+    const quienes = p.join(' y '), equipo = teamName(t, r.names);
+    if (pelado(quienes) !== pelado(equipo)) filas.push(fila(escapa(equipo), escapa(quienes)));
   });
 
   $('#mano-cuerpo').innerHTML =
