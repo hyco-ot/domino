@@ -81,6 +81,10 @@ button{border:0;background:none;cursor:pointer}
    el teclado de puntos, los diálogos y el cartel de ganador son hermanos de
    #app, no hijos, y girando solo #app se quedarían de pie encima. Lo de fixed
    dentro sigue funcionando porque pasa a medirse contra el body girado. */
+/* El alto util. Girando por CSS, lo que hace de alto es el ANCHO del telefono:
+   todo lo que se mida contra la pantalla tiene que pasar por aqui. */
+:root{--vh:100vh}
+[data-acostado="1"]{--vh:100vw}
 [data-acostado="1"] body{
   position:fixed;top:0;left:0;
   width:100vh;height:100vw;
@@ -125,29 +129,37 @@ button{border:0;background:none;cursor:pointer}
    app y la API de bloquear la orientación no está en iOS—, así que lo que se
    hace es que TODAS las pantallas aguanten de lado: las que son una lista, que
    rueden; y el tablero, que encoja lo que sobra de alto. */
-@media (orientation: landscape) and (max-height: 560px) {
-  /* lo que era una columna centrada pasa a rodar: de lado no cabe centrado */
-  .mode-wrap{justify-content:flex-start;overflow-y:auto;gap:14px;padding-bottom:20px}
-  .brand{font-size:clamp(22px,7vh,32px)}
-  .modes{margin-top:6px}
-  .tira .mode-card{padding:9px 14px}
-  .tira .mode-card svg{height:34px}
-  /* el teclado de puntos no cabe entero: se le baja la talla a las teclas */
-  .pad button{height:clamp(34px,9vh,52px);font-size:19px;border-radius:12px}
-  .sheet{max-height:100vh;overflow-y:auto}
-  .chips{gap:6px}
-  /* el tablero: menos alto perdido arriba y en los botones */
-  .top{min-height:40px;padding:4px 12px 2px}
-  .gamebar{padding:0 20px 4px}
-  .team-top{gap:5px;padding:3px 2px 8px}
-  .acts{margin-top:2px}
-}
-/* De tres y de lado es donde mejor queda: tres columnas anchas y el marcador
-   grande otra vez, porque el ancho ya no es el problema. */
-@media (orientation: landscape) {
-  .board.tres{--sc:clamp(34px,7.5vw,80px)}
-  .board.tres .bar{max-width:150px}
-}
+/* Acostado, de la manera que sea. La bandera la pone render() mirando las dos:
+   la pantalla de verdad y el giro a mano. NO puede ser una @media, porque
+   girando por CSS la consulta de orientacion sigue diciendo que no. */
+[data-apaisado="1"] .mode-wrap{justify-content:flex-start;overflow-y:auto;
+  gap:14px;padding-bottom:20px}
+[data-apaisado="1"] .brand{font-size:clamp(20px,9vmin,30px)}
+[data-apaisado="1"] .modes{margin-top:6px}
+[data-apaisado="1"] .tira .mode-card{padding:8px 14px}
+[data-apaisado="1"] .tira .mode-card svg{height:32px}
+[data-apaisado="1"] .kicker{font-size:10px}
+/* El teclado de puntos es lo que peor cabe: teclas mas bajas, atajos mas
+   chicos, y sobre todo que se pueda rodar — .sheet trae touch-action:none para
+   que arrastrarlo no pelee con la pagina, y eso tambien mata el desplazamiento. */
+[data-apaisado="1"] .sheet{max-height:var(--vh);overflow-y:auto;touch-action:pan-y}
+[data-apaisado="1"] .pad{gap:6px}
+[data-apaisado="1"] .pad button{height:clamp(30px,11vmin,46px);font-size:18px;border-radius:11px}
+[data-apaisado="1"] .chips{gap:6px}
+[data-apaisado="1"] .chips button{padding:6px 4px}
+[data-apaisado="1"] .chip-ico{width:16px;height:16px}
+[data-apaisado="1"] .entry{font-size:clamp(26px,9vmin,44px)}
+[data-apaisado="1"] .aim svg{width:22px;height:22px}
+[data-apaisado="1"] .sheet-head{padding:0 4px 6px}
+/* El tablero: menos alto perdido en todo lo que no es el marcador. */
+[data-apaisado="1"] .top{min-height:38px;padding:3px 12px 1px}
+[data-apaisado="1"] .gamebar{padding:0 20px 3px}
+[data-apaisado="1"] .team-top{gap:4px;padding:2px 2px 7px}
+[data-apaisado="1"] .acts{margin-top:2px}
+[data-apaisado="1"] .board{--sc:clamp(30px,13vmin,64px)}
+/* De tres y acostado es donde mejor queda: tres columnas anchas de verdad. */
+[data-apaisado="1"] .board.tres{--sc:clamp(28px,12vmin,58px)}
+[data-apaisado="1"] .board.tres .bar{max-width:150px}
 
 /* El Clásico es el modo pelado: ya se queda sin reacciones y sin atajos, y
    también sin animaciones. Una sola regla las apaga todas, en vez de repetir
@@ -1868,6 +1880,11 @@ let acostado = false;
    pantalla ya está acostada, y en una tablet grande cabe de pie. */
 const esTelefono = () => matchMedia('(pointer: coarse)').matches &&
   Math.min(innerWidth, innerHeight) < 820;
+/* ¿Está acostada, de la manera que sea? Girada a mano cuenta igual que girada
+   de verdad: para lo que se ve en pantalla son lo mismo, y la consulta de
+   orientación no se entera del giro por CSS. */
+const apaisado = () => acostado === 'css' ||
+  (matchMedia('(orientation: landscape)').matches && innerHeight <= 560);
 /* Qué equipo acaba de anotar, para que su fila y su cifra entren bajando. No
    persiste ni cuenta como estado: vale para un solo repintado. */
 let filaNueva = -1;
@@ -2286,6 +2303,7 @@ function render() {
   /* El giro por CSS cuelga del <html>, para que arrastre TODO lo que hay bajo
      el <body> y no solo la app. */
   root.dataset.acostado = acostado === 'css' ? '1' : '';
+  root.dataset.apaisado = apaisado() ? '1' : '';
   const enTel = esTelefono();
   $('#mi-acostar').hidden = !enTel;
   $('#sep-acostar').hidden = !enTel;
@@ -4296,6 +4314,14 @@ document.addEventListener('visibilitychange', () => {
   avisarTres();
   ofrecerGrupo();
 });
+/* Girar el teléfono no cambia el estado, pero sí lo que cabe: hay que volver a
+   mirar si está acostada. */
+addEventListener('orientationchange', () => setTimeout(render, 120));
+addEventListener('resize', () => {
+  // root es local de render(): aqui hay que pedirlo otra vez
+  if (!!document.documentElement.dataset.apaisado !== apaisado()) render();
+});
+
 setInterval(checkIdle, 60 * 1000);   // también si la app queda abierta pero sin usar
 
 // Una PWA instalada casi no navega, así que el navegador puede tardar días en
