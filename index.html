@@ -835,19 +835,19 @@ button{border:0;background:none;cursor:pointer}
    caja va y viene; el dibujo de dentro respira. */
 .rev{position:fixed;z-index:19;
   right:calc(4px + env(safe-area-inset-right));
-  top:50%;margin-top:-27px;
-  width:54px;height:54px;display:grid;place-items:center;
+  top:50%;margin-top:-34px;
+  width:68px;height:68px;display:grid;place-items:center;
   color:var(--ok);
   animation:vaiven 1.6s ease-in-out infinite}
 /* trae display propio: sin esto el hidden del navegador no la esconde */
 .rev[hidden]{display:none}
 .rev-ico{display:grid;place-items:center;animation:respira 2.1s ease-in-out infinite}
-.rev svg{width:30px;height:30px;fill:none;stroke:currentColor;
+.rev svg{width:46px;height:46px;fill:none;stroke:currentColor;
   stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
 .rev:active{opacity:.55}
 @keyframes vaiven{
   0%, 100%{transform:translateX(0)}
-  50%     {transform:translateX(7px)}
+  50%     {transform:translateX(10px)}
 }
 /* al tocarla se va por donde apunta; arrastrando no hace falta, que el dedo ya
    hizo el movimiento */
