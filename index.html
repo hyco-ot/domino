@@ -183,7 +183,9 @@ button{border:0;background:none;cursor:pointer}
 [data-style="mono"] .anim-baja,
 [data-style="mono"] .erow.entra,
 [data-style="mono"] .score.baja,
-[data-style="mono"] .result{animation:none}
+/* En Clasico la flecha sigue estando —es el unico camino al resultado— pero
+   quieta, como todo lo demas. */
+[data-style="mono"] .rev, [data-style="mono"] .rev-ico{animation:none}
 
 /* ---------- barra superior ---------- */
 .top{display:flex;align-items:center;gap:6px;padding:10px 12px 4px;min-height:52px}
@@ -823,6 +825,35 @@ button{border:0;background:none;cursor:pointer}
    esconde nada. Es la sexta vez que muerde esta misma trampa. */
 .menu button[hidden], .menu .sep[hidden]{display:none}
 
+/* La flecha de revisar la mano. Va pegada al borde derecho y a media altura:
+   ahi no tapa ni el marcador ni el log, y es de donde tiene que "salir" la
+   pantalla al arrastrarla. En verde, que es el acento de la app y el color de
+   "esto se puede tocar".
+
+   Las dos animaciones van en elementos distintos a proposito: un elemento solo
+   tiene una propiedad transform, y el vaiven y la respiracion se pisarian. La
+   caja va y viene; el dibujo de dentro respira. */
+.rev{position:fixed;z-index:19;
+  right:calc(4px + env(safe-area-inset-right));
+  top:50%;margin-top:-27px;
+  width:54px;height:54px;display:grid;place-items:center;
+  color:var(--ok);
+  animation:vaiven 1.6s ease-in-out infinite}
+/* trae display propio: sin esto el hidden del navegador no la esconde */
+.rev[hidden]{display:none}
+.rev-ico{display:grid;place-items:center;animation:respira 2.1s ease-in-out infinite}
+.rev svg{width:30px;height:30px;fill:none;stroke:currentColor;
+  stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.rev:active{opacity:.55}
+@keyframes vaiven{
+  0%, 100%{transform:translateX(0)}
+  50%     {transform:translateX(7px)}
+}
+/* al tocarla se va por donde apunta; arrastrando no hace falta, que el dedo ya
+   hizo el movimiento */
+@keyframes seVa{to{transform:translateX(140%);opacity:0}}
+.rev.se-va{animation:seVa .26s cubic-bezier(.4,0,1,1) both}
+
 /* El botón de acostar: flota abajo a la derecha, por debajo de todo lo que se
    abre encima (el teclado es z-index 21) porque además se esconde con ello. */
 .fab{position:fixed;z-index:19;
@@ -1361,12 +1392,6 @@ button{border:0;background:none;cursor:pointer}
 
     <!-- Ajustes e Historial se fueron al menú de los tres puntos. Aquí solo
          queda el acceso al resultado, y el pie entero se oculta si no toca. -->
-    <div class="foot" id="foot">
-      <button class="result" id="btn-result" hidden>
-        Revisar la mano
-        <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-      </button>
-    </div>
   </section>
 
   <!-- ============ pantalla 3: ajustes ============ -->
@@ -1566,6 +1591,12 @@ button{border:0;background:none;cursor:pointer}
 <!-- reacción a pantalla completa (¡Lisa!) -->
 <!-- Acostar la pantalla. Flota abajo a la derecha y se esconde en cuanto algo
      se abre encima: el teclado de puntos sube desde ahí mismo. -->
+<!-- Solo con una mano terminada. Va en el borde derecho y va y viene hacia alla:
+     esta pidiendo el gesto de arrastrar, que hace lo mismo. -->
+<button class="rev" id="btn-rev" hidden aria-label="Revisar la mano">
+  <span class="rev-ico"><svg viewBox="0 0 24 24"><path d="M6 5l7 7-7 7M13 5l7 7-7 7"/></svg></span>
+</button>
+
 <button class="fab" id="btn-acostar" hidden aria-label="Acostar la pantalla">
   <svg viewBox="0 0 24 24"><rect x="2.5" y="6.5" width="19" height="11" rx="2.2"/><path d="M17.5 3.5l3 3-3 3"/></svg>
 </button>
@@ -2551,8 +2582,8 @@ function render() {
   const hayResultado = S.over >= 0 && winSeen;
   /* No hace falta dispararla: respira sola mientras esté a la vista, y a la
      vista está exactamente cuando hay una mano que revisar. */
-  $('#btn-result').hidden = !hayResultado;
-  $('#foot').hidden = !hayResultado;      // sin nada dentro, el pie sobra
+  // la flecha del borde: es el unico rastro de que hay una mano que mirar
+  $('#btn-rev').hidden = !hayResultado;
   root.style.setProperty('--wc', S.over === 1 ? 'var(--b)' : 'var(--a)');
 
   if (!isLisa()) lisaWord = '';           // mano nueva: se vuelve a sortear
@@ -4433,7 +4464,36 @@ $('#board').addEventListener('click', e => {
   if (ed) { const i = +ed.dataset.edit; buzz(10); openPad(S.rounds[i].t, i); }
 });
 
-$('#btn-result').addEventListener('click', () => { buzz(10); winSeen = false; render(); });
+/* Ver el resultado de la mano. Tocando la flecha, esta se va por donde apunta
+   antes de abrirlo; arrastrando NO se anima, porque el dedo ya hizo ese
+   movimiento y repetirlo se siente doble. */
+function verResultado(animando) {
+  if (S.over < 0 || !winSeen) return;
+  buzz(10);
+  const abrir = () => { winSeen = false; render(); };
+  if (!animando || S.style !== 'chercha') return abrir();
+  const b = $('#btn-rev');
+  b.classList.add('se-va');
+  setTimeout(() => { b.classList.remove('se-va'); abrir(); }, 260);
+}
+$('#btn-rev').addEventListener('click', () => verResultado(true));
+
+/* Arrastrar la pantalla hacia la derecha: es el gesto que la flecha esta
+   pidiendo. Se exige que sea claramente horizontal, o bajar por el log de
+   anotaciones abriria el resultado sin querer. */
+let arrX = 0, arrY = 0, arrastrando = false;
+$('#board').addEventListener('touchstart', e => {
+  arrastrando = S.over >= 0 && winSeen && e.touches.length === 1;
+  if (!arrastrando) return;
+  arrX = e.touches[0].clientX; arrY = e.touches[0].clientY;
+}, { passive: true });
+$('#board').addEventListener('touchend', e => {
+  if (!arrastrando) return;
+  arrastrando = false;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - arrX, dy = t.clientY - arrY;
+  if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.6) verResultado(false);
+}, { passive: true });
 
 // el selector de vista se repinta con la lista, así que va por delegación
 $('#stats-body').addEventListener('click', e => {
