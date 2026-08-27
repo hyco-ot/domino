@@ -835,7 +835,11 @@ button{border:0;background:none;cursor:pointer}
    caja va y viene; el dibujo de dentro respira. */
 .rev{position:fixed;z-index:19;
   right:calc(4px + env(safe-area-inset-right));
-  top:50%;margin-top:-34px;
+  /* El top es a gusto; el -34px NO es posicion, es el centrado: la mitad del
+     alto de la linea de abajo, y tiene que seguirlo si el tamano cambia.
+     Se centra con margin y no con translateY porque el transform lo tiene
+     ocupado el vaiven, y se pisarian. */
+  top:55%;margin-top:-34px;
   width:68px;height:68px;display:grid;place-items:center;
   color:var(--ok);
   animation:vaiven 1.6s ease-in-out infinite}
