@@ -324,6 +324,7 @@ Two invariants to preserve:
   Preferible para Dominicanos o Cubanos.
 
   -HycoPtiC 2026.
+  Con Claude de compañero de mesa, que me acompañó en toda esta historia.
   ```
 
   The "NO DESCARGAR" matters: GitHub offers a source zip on every release, and downloading it gets you a folder that does nothing. The link is the app.
