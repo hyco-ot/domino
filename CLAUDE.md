@@ -289,6 +289,14 @@ It validates before touching anything, and says what it is about to do (`"Trae 6
 
 `recargar()` is the single place that reloads the page. Three unrelated things need it — restoring, reinstalling, and applying a waiting version — and keeping them in one function is what makes it obvious that reloading is always deliberate, never a side effect.
 
+### The screen dims itself, and the tap that undims it must not score
+
+The app holds a `wakeLock` so the screen never sleeps mid-hand, and that is paid for in battery. `ATENUA_MS` (90 s) after the last touch, `#atenua` fades in over everything at `z-index:60` — above the winner screen, which would otherwise stay lit on its own. A web page cannot lower a phone's brightness; a black veil is the only lever there is, and it only really saves power on OLED, where black costs no light.
+
+**The trap is the tap that wakes it.** `click` arrives *after* `pointerdown`, so a veil that stopped capturing the moment it turned transparent would hand that click to whatever button was underneath — waking the screen would score a hand. Being visible and swallowing touches are therefore two classes: `.on` (opacity) goes immediately, `.captura` (`pointer-events:auto`) lingers 400 ms. Anything that dismisses an overlay on `pointerdown` has this shape.
+
+`atenuado` is screen state and does not persist, like `acostado`. The document-level wake listeners are `{capture: true}` so a handler that stops propagation cannot swallow the reset, and they do nothing while the veil is up — there the veil itself is what answers.
+
 ### Session and idle reset
 
 `checkIdle()` resets the session (mode, scoreboard, games won) after `IDLE_MS` of inactivity, but **preserves `history`, `names`, `theme`, `style` and `target`**. It fires when the app becomes visible again and on a `setInterval` every minute.
@@ -390,6 +398,7 @@ A third trap of the same family, found the same way: **`paso()` in the jsdom tes
 - The board's team name is an editable `<input>` in Informal and a read-only stack of player names (`.names2`) in Formal — the name comes from who is seated, so editing it there would contradict the table with nothing to reflect it.
 - The style picker (Chercha / Clásico) lives in **two** places: the three-dot menu during a hand, and the top of Ajustes before one starts, since the menu doesn't exist on the launcher. `#cfg-sec-estilo` hides itself when `S.mode` is set, so only one is ever reachable.
 - The score pad shows **no team name on purpose**. `.aim` is a two-column grid that parks an up-arrow over the half matching the team being scored, which lines up with that team's board column; the pad's `--pt` tint carries the same information. Don't "fix" it by adding a label back — the name lives on in the `aria-label` for screen readers.
+- **With three columns, the newest entry per column is not the newest entry.** Each column keeps its dashed box, its X and its `data-edit` — that is "this one can be corrected", and it is per column by necessity. The **colour** answers a different question, "who just scored", so at a trio it is moved to `.ahora`, the newest of the whole table (`#board.tres`). Three coloured figures point at nobody. `manosHTML()` had always done it this way; `entriesHTML()` now does too, but **only at a trio** — with two columns there is one on each side and they tell themselves apart.
 - **`view === 'stats'` no longer implies a game is running.** The history is reachable from the launcher (only with at least one saved hand — an empty history is not a screen), so `#sc-stats` is toggled on `view` alone and its back arrow returns to whichever of the two it came from. The guard that matters is the other direction: clearing the history while looking at it from the launcher has to close the screen, or it stays open and blank.
 - The slide animations run on `.screen > *`, never on `.screen` itself — that one is the flex column that holds the layout together, and transforming it moves the whole page. `animar()` removes the class before re-adding it and forces a reflow, or the same animation twice in a row plays once.
 - The slide classes animate `> *`, but `.anim-fade` and `.anim-baja` animate **the element itself** — they are used on single pieces (the mesa's tile and mode caption when the mode changes; an accordion when it unfolds), not on a whole screen. `animar()` clears them all via `ANIMS`, so a new animation class has to be added there or it will never be removed.

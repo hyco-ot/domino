@@ -596,6 +596,11 @@ button{border:0;background:none;cursor:pointer}
 .erow.last .pts{color:var(--tc);font-weight:700;
   padding:2px 8px;border-radius:9px;border:1px dashed var(--line)}
 .erow.last .pts:active{background:var(--sunk)}
+/* De tres, el color se lo queda la última de la mesa y no la de cada columna:
+   tres cifras en color no señalan a nadie. El recuadro se queda en las tres,
+   que ese dice "se puede corregir". */
+#board.tres .erow.last .pts{color:var(--dim);font-weight:600}
+#board.tres .erow.ahora .pts{color:var(--tc);font-weight:700}
 .erow .marks{display:flex;align-items:center;gap:4px;color:var(--dim)}
 .erow .marks .pg{display:flex;align-items:center;gap:1px}
 .erow .marks .mark{width:14px;height:14px;flex:0 0 auto;fill:none;
@@ -1088,6 +1093,17 @@ button{border:0;background:none;cursor:pointer}
    una celebracion, asi que se sale de las dos cosas. */
 .win-flip svg{width:20px;height:20px;fill:none;stroke:currentColor;
   stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;animation:none}
+
+/* El velo de atenuar. z-index por encima del cartel de ganador (50), que si no
+   se quedaría iluminado él solo. Se va y viene con opacidad y no con display,
+   para que el apagón sea un fundido y no un parpadeo. */
+.atenua{position:fixed;inset:0;z-index:60;background:#000;
+  opacity:0;pointer-events:none;transition:opacity .9s ease}
+.atenua.on{opacity:.8}
+/* Tragarse el toque es una clase aparte de verse: el toque que despierta NO
+   debe anotar nada, y el click llega DESPUÉS de que el velo ya se esté yendo.
+   Por eso sigue capturando un instante más de lo que se ve. */
+.atenua.captura{pointer-events:auto}
 
 .win .acts{display:flex;flex-direction:column;gap:9px;width:100%;max-width:290px;margin-top:12px}
 .win .acts button{padding:14px;border-radius:16px;font-weight:700;font-size:15px}
@@ -1749,6 +1765,10 @@ button{border:0;background:none;cursor:pointer}
     <button class="ghost" id="win-close">Ver Puntos</button>
   </div>
 </div>
+
+<!-- El velo que atenúa. Va el último y por encima de todo: la pantalla se
+     oscurece entera, cartel de ganador y teclado incluidos. -->
+<div class="atenua" id="atenua"></div>
 
 <script>
 'use strict';
@@ -2754,6 +2774,10 @@ function entriesHTML(team) {
   if (!mine.length) return '';
   const pips = MODES[S.mode].pips || 6;
   const newest = mine.length - 1;
+  /* La última de la MESA, solo de tres: es la única que va en color, para que
+     se vea de un vistazo quién acaba de anotar. De dos no hace falta —hay una
+     por lado y se distinguen solas— y marcarla cambiaría el tablero de todos. */
+  const ultima = esTres() ? S.rounds.length - 1 : -1;
 
   return mine.map((e, n) => {
     const marks = [], pn = e.pase || 0;
@@ -2768,7 +2792,7 @@ function entriesHTML(team) {
       : `<span class="pts">${e.p}</span>`;
     // las tres celdas van siempre, vacías si no toca: la rejilla las coloca por
     // posición y una fila a la que le falte una descuadraría a las de al lado
-    return `<div class="erow${n === newest ? ' last' : ''}">
+    return `<div class="erow${n === newest ? ' last' : ''}${e.i === ultima ? ' ahora' : ''}">
       <span class="ewhen">${e.ts ? soloHora(e.ts) : ''}</span>
       <span class="emid">${cifra}${marks.length ? `<span class="marks">${marks.join('')}</span>` : ''}</span>
       ${n === newest
@@ -4868,6 +4892,47 @@ setInterval(() => {
     }
   } catch {}
 })();
+
+/* Minuto y medio sin tocar nada y la pantalla se pone oscura, sin apagarse.
+   No persiste: es estado de pantalla, como acostado. */
+const ATENUA_MS = 90 * 1000;
+let atenuado = false, atenuaT = 0, capturaT = 0;
+
+function atenuar() {
+  if (atenuado || document.visibilityState !== 'visible') return;
+  atenuado = true;
+  $('#atenua').classList.add('on', 'captura');
+}
+
+/* Se llama con cada toque, tecla o vuelta a la app. Cuando el toque viene del
+   propio velo hay que seguir tragándoselo un rato: el click va detrás del
+   pointerdown y, con el velo ya transparente, caería en el botón de debajo. */
+function despertar(delVelo) {
+  clearTimeout(atenuaT);
+  atenuaT = setTimeout(atenuar, ATENUA_MS);
+  if (!atenuado) return;
+  atenuado = false;
+  $('#atenua').classList.remove('on');
+  clearTimeout(capturaT);
+  if (delVelo) capturaT = setTimeout(() => $('#atenua').classList.remove('captura'), 400);
+  else $('#atenua').classList.remove('captura');
+}
+
+['pointerdown', 'click', 'touchstart', 'wheel'].forEach(ev =>
+  $('#atenua').addEventListener(ev, e => { e.stopPropagation(); despertar(true); }));
+
+/* En captura, para que cuente el toque aunque alguien lo pare por el camino.
+   Si está oscura no se hace nada aquí: de eso se encarga el velo, que es quien
+   se lo traga. */
+['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(ev =>
+  addEventListener(ev, () => { if (!atenuado) despertar(); },
+                   { passive: true, capture: true }));
+
+// en document, que es donde se dispara y donde ya escucha el wake lock
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') despertar();
+});
+despertar();                              // arranca el reloj al abrir
 
 // Las fichas de las tarjetas de modo son fijas (doble 6 / doble 9): se pintan
 // una sola vez al arrancar. Antes quedaban vacías porque nadie las rellenaba.
