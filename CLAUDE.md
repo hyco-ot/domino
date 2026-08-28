@@ -306,8 +306,30 @@ Two invariants to preserve:
 - **Never change the `localStorage` key** (`domino.v2`) in a release — an update would wipe everyone's history.
 - **Cut a GitHub Release for every published version**, tagged `v<VERSION>` — `v3.22`, `v3.25`. Tags and releases are inert here: Pages is in branch mode, so nothing deploys from them and no phone notices. What they buy is a fixed point to come back to once `main` has moved on, the same job `v1.37` and `v2.50` already do for the archived copies. Keep the `v`: one release went up as bare `3.22` and had to be redone.
 
+  The notes are **written for whoever lands on that page**, not as a changelog — the releases page is public and the people who find it want to play, not to read a diff. Keep the shape:
+
+  ```
+  Tranque - Anotador de Dominó Interactivo      ← the title, the same every time
+
+  NO DESCARGAR.
+  Juega aquí: https://hyco-ot.github.io/domino/ — puedes instalarlo desde ahí
+  en tu celular, funciona sin conexión.
+
+  Versión 3.25
+
+  <one warm line about what is new, in plain words>
+
+  Contiene muchas cosas interactivas, y la opción de quitarlas, pruébala!!
+
+  Preferible para Dominicanos o Cubanos.
+
+  -HycoPtiC 2026.
+  ```
+
+  The "NO DESCARGAR" matters: GitHub offers a source zip on every release, and downloading it gets you a folder that does nothing. The link is the app.
+
   ```bash
-  gh release create v3.25 --title "Tranque 3.25" --notes "…"
+  gh release create v3.25 --title "Tranque - Anotador de Dominó Interactivo" --notes-file notas.md
   ```
 
 **Diagnosing a phone stuck on an old version.** Ajustes shows the version the active worker reports (`showVer()` asks it over a `MessageChannel`). If it says `desconocida (service worker viejo)`, a pre-update-flow worker is still in control: it has no `GET_VERSION` handler and can't be asked to step aside.
