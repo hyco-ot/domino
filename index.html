@@ -2978,7 +2978,13 @@ function renderMesa() {
   $('#mesa4').classList.toggle('de3', mesaCuantos(m) === 3);
   const foco = document.activeElement;
   $$('#mesa4 .silla').forEach(el => {
-    const i = +el.dataset.silla, t = i % 2;   // abajo/arriba un equipo, los lados el otro
+    const i = +el.dataset.silla;
+    /* Qué columna del tablero pinta esta silla. De dos o de cuatro, abajo y
+       arriba son un equipo y los lados el otro; de tres cada uno es su propia
+       columna, y el orden lo dice ASIENTOS3 — que NO es el de las sillas. Con
+       la regla de dos, las sillas 1 y 3 caían las dos en el equipo 1 y los dos
+       contrarios salían del mismo color. La silla 2 no existe de tres. */
+    const t = mesaTres(m) ? Math.max(0, ASIENTOS3.indexOf(i)) : i % 2;
     el.style.setProperty('--as', colorDe(S.accents[t]));
     // no se repinta la silla que se está tecleando, o se pierde lo escrito
     if (el.contains(foco) && foco.tagName === 'INPUT') return;
@@ -2998,7 +3004,7 @@ function renderMesa() {
     }
   });
 
-  renderAccents('#mesa-accents');
+  renderAccents('#mesa-accents', m.ids);
   refrescarMesa();
 }
 
@@ -3141,7 +3147,7 @@ function renderJug() {
   $('#jug-extra-btn').setAttribute('aria-expanded', jugExtra);
   $('#jug-extra').hidden = !jugExtra;
   $('#jug-nombres-sec').hidden = esTres();
-  if (jugExtra) { renderNombres(); renderAccents(); }
+  if (jugExtra) { renderNombres(); renderAccents('#jug-accents', jugBorrador); }
 
   $('#jug-guardar').hidden = !jugCambia();
   $('#jug-ok').disabled = !jugVale();
@@ -3185,12 +3191,22 @@ async function guardarJug() {
 
 // Dos filas de puntos de color, una por equipo. Se muestra el tono del tema en
 // curso, y el que ya usa el otro equipo sale apagado para no repetirlo.
-function renderAccents(host = '#jug-accents') {
+/* Cómo se llama una columna en el selector de colores. De tres no hay equipos
+   que nombrar: cada columna es una persona. Mientras se arma la mesa puede que
+   todavía no se haya sentado, y ahí "Jugador N" es lo único que se puede decir
+   — pero nunca "Nosotros" ni "Ellos", que ahí no significan nada. */
+const nombreColumna = (t, ids) => esTres()
+  ? (nombreDeId((ids || [])[ASIENTOS3[t]]) || `Jugador ${t + 1}`)
+  : teamName(t);
+
+// Los ids son los de quien pregunte: la mesa que se está armando o el borrador
+// de la pantalla de jugadores, que puede no ser todavía el de la mesa.
+function renderAccents(host = '#jug-accents', ids) {
   const eq = cadaEq();
   const sel = S.accents || DEFAULT_ACCENTS;
   $(host).innerHTML = eq.map(i => `
     <div class="acc-row">
-      <div class="acc-who">${escapa(teamName(i))}</div>
+      <div class="acc-who">${escapa(nombreColumna(i, ids))}</div>
       <div class="acc-dots">
         ${Object.entries(ACCENTS).map(([k, a]) => {
           // de tres hay DOS "otros": hay que decir con quién se cambiaría

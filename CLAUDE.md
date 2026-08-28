@@ -174,13 +174,14 @@ Two people or four means two scoring columns; **three means three**, everyone ag
 
 A stored hand carries `r.tres`, and `manoTres(r)` is the **only** way to ask. Asking `r.tres` directly left out hands saved before the flag existed, which the history still painted with three figures — the pill showed three scores and the detail sheet showed two.
 
-Three consequences that were each a bug first:
+Four consequences that were each a bug first:
 
 - **Anything that resets a score array has to size it.** `newGame()` hard-coded `[0, 0]`, so the second hand of a trio painted "Faltan NaN" in the third column.
 - **Colours are as many as there are columns.** `acentosAlDia()` swaps the whole set when the count stops matching, and it is called from `renderMesa()` and from `#mesa-ok` — the two moments the count can change. `TRES_ACCENTS` is morado · azul · verde, in column order, so the scorekeeper in the middle is blue.
 - **There are two "others" now.** Picking a colour someone else has swaps with them; with three, the code has to find *which* one. Same for lisa: it is winning without **anyone** else scoring, not without the other one scoring.
+- **A seat's column is not `seat % 2`.** That rule put seats 1 and 3 both in team 1, so the mesa painted the two opponents of a trio the *same* colour — and it looked deliberate, which is why it survived from 3.00 to 3.34. The seat → column map is `ASIENTOS3.indexOf(seat)`, and it is the inverse of the one that goes the other way. **Anything that indexes people by seat has to ask which of the two it needs.**
 
-Team names don't exist at a trio: each column is a person, so the "Nombres de los equipos" section hides itself and the names always come from who is seated. The board columns get their own smaller scale through `--sc`, since each has a third of the screen instead of half.
+Team names don't exist at a trio: each column is a person, so the "Nombres de los equipos" section hides itself and the names always come from who is seated. The colour picker follows the same rule through `nombreColumna(t, ids)` and **not** `teamName()`: the latter falls back to `DEFAULT_NAMES`, which labelled a trio's rows "Nosotros · Ellos · Jugador 3". While the table is being built a seat can still be empty, and `Jugador N` is the only thing that can be said — but never "Nosotros". It takes the ids from whoever asks, because the Jugadores screen edits `jugBorrador` and not the mesa. The board columns get their own smaller scale through `--sc`, since each has a third of the screen instead of half.
 
 **Landscape is not scoped to the mode, and can't be.** The lock lived in the manifest, which applies to the whole app, and the Screen Orientation API isn't available on iOS. So the lock was dropped and every screen was made to survive sideways — the lists scroll, the pad shrinks its keys, the board trims vertical chrome. The trio is the case that actually gains from it.
 
