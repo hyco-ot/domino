@@ -869,6 +869,8 @@ button{border:0;background:none;cursor:pointer}
   color:var(--dim);transition:transform .12s ease}
 /* .fab trae su propio display: sin esto el hidden del navegador no lo esconde */
 .fab[hidden]{display:none}
+/* el del resumen, al otro lado: el de acostar ya ocupa la derecha */
+.fab.izq{right:auto;left:calc(14px + env(safe-area-inset-left))}
 .fab:active{transform:scale(.9)}
 .fab svg{width:22px;height:22px;fill:none;stroke:currentColor;
   stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -1048,7 +1050,34 @@ button{border:0;background:none;cursor:pointer}
 @keyframes lisaPop{from{opacity:0;transform:scale(.5) rotate(-8deg)}}
 .win .who{font-size:clamp(30px,10vw,42px);font-weight:800;letter-spacing:-.03em;
   color:var(--wc);text-align:center;line-height:1.05}
-.win .final{font-size:19px;font-weight:600;color:var(--dim);font-variant-numeric:tabular-nums}
+/* El marcador final, 200% mas grande: a 19px se perdia debajo del nombre y es
+   justo el dato que se mira. Se acota con clamp porque en un telefono estrecho
+   un "305 — 290" a 57px no cabe de una linea. */
+.win .final{font-size:clamp(34px,13vw,57px);font-weight:700;color:var(--dim);
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.05}
+/* De pie no sale: ahí manda el nombre del que ganó y el alto está justo. */
+.win .perdio{display:none;font-size:15px;font-weight:600;color:var(--dim);
+  opacity:.75;text-align:center;max-width:100%}
+[data-apaisado="1"] .win .perdio{display:block}
+/* y acostado, la ficha del modo sobra: no dice nada que el tablero no diga */
+[data-apaisado="1"] .win .tile{display:none}
+[data-apaisado="1"] .win{gap:9px;padding:14px 30px}
+
+/* Girar el teléfono desde el propio cartel. Absolute y no fixed: .win ya es
+   fija y a pantalla completa, así que la esquina de aquí es la de la pantalla. */
+.win-flip{position:absolute;
+  top:calc(12px + env(safe-area-inset-top));
+  right:calc(12px + env(safe-area-inset-right));
+  width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
+  color:var(--dim);border:1px solid var(--line);background:var(--elev)}
+/* trae display propio: sin esto el hidden del navegador no lo esconde */
+.win-flip[hidden]{display:none}
+.win-flip:active{background:var(--sunk)}
+/* .win svg le pone 118px de alto y el pop de la ficha: esto es un mando, no
+   una celebracion, asi que se sale de las dos cosas. */
+.win-flip svg{width:20px;height:20px;fill:none;stroke:currentColor;
+  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;animation:none}
+
 .win .acts{display:flex;flex-direction:column;gap:9px;width:100%;max-width:290px;margin-top:12px}
 .win .acts button{padding:14px;border-radius:16px;font-weight:700;font-size:15px}
 /* Late despacio para que se vea de un vistazo por dónde se sigue. Arranca con
@@ -1603,6 +1632,12 @@ button{border:0;background:none;cursor:pointer}
   <span class="rev-ico"><svg viewBox="0 0 24 24"><path d="M6 5l7 7-7 7M13 5l7 7-7 7"/></svg></span>
 </button>
 
+<!-- El del día va a la IZQUIERDA: el de acostar vive a la derecha y dos cosas
+     peleando por el mismo pulgar no es una opción. -->
+<button class="fab izq" id="btn-dia" hidden aria-label="Resumen del día">
+  <svg viewBox="0 0 24 24"><path d="M5 4h14M5 9h14M5 14h9M5 19h5"/></svg>
+</button>
+
 <button class="fab" id="btn-acostar" hidden aria-label="Acostar la pantalla">
   <svg viewBox="0 0 24 24"><rect x="2.5" y="6.5" width="19" height="11" rx="2.2"/><path d="M17.5 3.5l3 3-3 3"/></svg>
 </button>
@@ -1684,11 +1719,20 @@ button{border:0;background:none;cursor:pointer}
 
 <!-- ganador -->
 <div class="win" id="win">
+  <!-- Girar desde aquí: el cartel tapa todo (z-index 50), así que el botón de
+       fuera no se alcanza — y es justo aquí donde se quiere acostar el teléfono
+       para enseñar quién ganó. -->
+  <button class="win-flip" id="win-acostar" hidden aria-label="Acostar la pantalla">
+    <svg viewBox="0 0 24 24"><rect x="2.5" y="6.5" width="19" height="11" rx="2.2"/><path d="M17.5 3.5l3 3-3 3"/></svg>
+  </button>
   <span class="tile" id="win-tile"></span>
   <div class="cap" id="win-cap">Primera mano</div>
   <div class="lisa" id="win-lisa" hidden>¡Lisa!</div>
   <div class="who" id="win-name"></div>
   <div class="final" id="win-final"></div>
+  <!-- Quién perdió: solo acostado, que es donde hay ancho y donde se está
+       enseñando a la mesa. De pie el alto se lo lleva todo. -->
+  <div class="perdio" id="win-perdio"></div>
   <div class="acts">
     <button class="primary" id="win-new">Seguir</button>
     <button class="ghost" id="win-close">Ver Puntos</button>
@@ -1869,6 +1913,9 @@ const blank = () => ({
   /* ¿Ya se le contó lo del modo de tres? 1 en una instalación nueva: quien
      empieza hoy no tiene ninguna novedad que estrenar. */
   avisoTres:  1,
+  /* Qué día de juego se resumió al cerrarlo. Sirve para no volver a ofrecer el
+     de ayer cada vez que se abre la app. */
+  diaVisto:   0,
   esquema:   7       // versión del estado guardado; la usa load() para migrar
 });
 
@@ -2458,6 +2505,11 @@ function render() {
      esconderlo dependería de repintar en cada apertura, que no siempre pasa. */
   const fab = $('#btn-acostar');
   fab.hidden = !esTelefono() || S.anotador === null;
+  /* El del día, solo anotando y cuando ya hay tarde de verdad. Se mira el día
+     entero, no la tanda: cuenta lo jugado desde las 7 de la mañana. */
+  // S.mode y no inGame: esa se declara mas abajo en esta misma funcion
+  $('#btn-dia').hidden = !(S.mode && view === 'game' &&
+    manosDelDia(diaDeJuego(Date.now())).length >= RESUMEN_BOTON);
   fab.classList.toggle('on', !!acostado);
   fab.setAttribute('aria-label', acostado ? 'Levantar la pantalla' : 'Acostar la pantalla');
   $$('[data-set-style]').forEach(b => b.setAttribute('aria-checked', b.dataset.setStyle === S.style));
@@ -2625,6 +2677,12 @@ function render() {
     $('#win-name').textContent = teamName(w);
     // el marcador final, con tantas cifras como columnas
     $('#win-final').textContent = cadaEq().map(t => S.scores[t] || 0).join(' — ');
+    // los que no ganaron; de tres son dos, y van los dos
+    $('#win-perdio').textContent = cadaEq().filter(t => t !== w).map(t => teamName(t)).join(' · ');
+    // el mismo botón de siempre, en el único sitio donde se alcanza estando aquí
+    $('#win-acostar').hidden = !esTelefono();
+    $('#win-acostar').setAttribute('aria-label',
+      acostado ? 'Levantar la pantalla' : 'Acostar la pantalla');
   }
 }
 
@@ -3271,6 +3329,62 @@ function renderConfig() {
 // Se compara por día del calendario, no por 24 horas: una mano de anoche a las
 // 11 sigue siendo "Ayer" aunque hayan pasado menos de 24 horas.
 const dayKey = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+/* El día DE JUEGO empieza a las 7 de la mañana. Una mano de las dos de la
+   madrugada pertenece a la noche anterior, que es como se cuenta en la mesa. */
+const DIA_CORTE_H = 7;
+const diaDeJuego = ts => dayKey(new Date(ts - DIA_CORTE_H * 3600 * 1000));
+
+/* Más de dos manos para que haya algo que resumir; a partir de la quinta se
+   ofrece el botón, que para entonces ya es una tarde de verdad. */
+const RESUMEN_MIN = 3, RESUMEN_BOTON = 5;
+// una hora sin anotar nada y se pregunta si siguen
+const SIN_ANOTAR_MS = 60 * 60 * 1000;
+
+const manosDelDia = dia => S.history.filter(r => diaDeJuego(r.ts) === dia);
+
+/* Qué pasó ese día. El total y las lisas cuentan TODO, Blitz incluido; los
+   nombres solo pueden salir de las manos con jugadores, que son las únicas que
+   saben quién estaba sentado. */
+function resumenDelDia(dia) {
+  const manos = manosDelDia(dia);
+  if (manos.length < RESUMEN_MIN) return null;
+  const lisas = manos.filter(r =>
+    eqMano(r).every(t => t === r.w || !r.scores[t])).length;
+  const gana = new Map();
+  manos.forEach(r => {
+    if (!r.mesa) return;                       // Blitz no sabe quién jugó
+    idsEquipo(r.w, r.mesa, manoTres(r)).forEach(id => {
+      const n = nombreDeId(id);
+      if (n) gana.set(n, (gana.get(n) || 0) + 1);
+    });
+  });
+  const top = [...gana.entries()].sort((a, b) => b[1] - a[1]);
+  return { dia, manos: manos.length, lisas, top };
+}
+
+function textoResumen(r) {
+  const linea1 = `${r.manos} mano${r.manos === 1 ? '' : 's'}` +
+    (r.lisas ? `, ${r.lisas} lisa${r.lisas === 1 ? '' : 's'}` : ', ninguna lisa') + '.';
+  if (!r.top.length) return linea1;
+  const cima = r.top[0][1];
+  const primeros = r.top.filter(([, n]) => n === cima).map(([n]) => n);
+  const quien = primeros.length === 1
+    ? `Quien más ganó: ${primeros[0]}, con ${cima}.`
+    : `Empatados arriba con ${cima}: ${primeros.join(' y ')}.`;
+  return `${linea1}\n\n${quien}\n` +
+    r.top.map(([n, v]) => `${n} ${v}`).join(' · ');
+}
+
+/* Se enseña y ya: no cierra la mesa ni toca los puntos. Es información. */
+function verResumenDia(dia, cerrando) {
+  const r = resumenDelDia(dia);
+  if (!r) return Promise.resolve();
+  const hoy = dia === diaDeJuego(Date.now());
+  if (cerrando) { S.diaVisto = dia; save(); }
+  return ask(hoy ? 'Resumen del día' : `Resumen del ${new Date(dia).toLocaleDateString()}`,
+             textoResumen(r), 'Vale', false, '', '');
+}
 
 /* Hora corta, en el formato que se haya elegido en Ajustes. Se arma a mano en
    vez de con toLocaleTimeString porque el formato de 12 de es-DO sale
@@ -4263,6 +4377,11 @@ $('#jug-extra-btn').addEventListener('click', () => {
 /* Los jugadores solo existen en Formal, y Formal necesita un nombre. Cada
    "no se puede" dice lo que falta para poder. */
 $('#btn-acostar').addEventListener('click', acostar);
+$('#win-acostar').addEventListener('click', acostar);
+$('#btn-dia').addEventListener('click', () => {
+  buzz(8);
+  verResumenDia(diaDeJuego(Date.now()));   // a mano no cierra el día
+});
 
 $('#btn-cuanta').addEventListener('click', () => {
   cuantaAbierta = !cuantaAbierta; buzz(8); render();
@@ -4673,6 +4792,7 @@ document.addEventListener('visibilitychange', () => {
   if (autoApply()) return;
   swReg.update().catch(() => {});
   avisarTres();
+  ofrecerResumenAyer();
   ofrecerGrupo();
 });
 /* Girar el teléfono no cambia el estado, pero sí lo que cabe: hay que volver a
@@ -4690,6 +4810,8 @@ addEventListener('resize', () => {
 });
 
 setInterval(checkIdle, 60 * 1000);   // también si la app queda abierta pero sin usar
+// el mismo minutero mira si toca preguntar si siguen ahí
+setInterval(checkResumenDia, 60 * 1000);
 
 // Una PWA instalada casi no navega, así que el navegador puede tardar días en
 // mirar por su cuenta. Con la app abierta se pregunta cada cuarto de hora.
@@ -4775,6 +4897,60 @@ function paintUpd() {
 /* Ni anotando puntos, ni con otro cartel delante, ni con una mano ganada en
    pantalla. Lo usan la actualización y la sugerencia de juego común: las dos
    interrumpen, y las dos pueden esperar al siguiente hueco. */
+/* Cuándo se anotó por última vez. Se saca de lo guardado en vez de llevar una
+   variable: así sobrevive a una recarga, que es justo cuando una variable en
+   memoria se perdería y el reloj empezaría de cero. */
+function ultimoApunte() {
+  const r = S.rounds[S.rounds.length - 1];
+  const h = S.history[S.history.length - 1];
+  return Math.max(r ? (r.ts || 0) : 0, h ? (h.ts || 0) : 0);
+}
+
+let preguntandoDia = false;   // no persiste: es un cartel
+let aplazadoDia = 0;          // cuándo dijeron "seguimos": la hora cuenta desde ahí
+
+/* Una hora sin anotar nada, con la app delante. NO se usa momentoTranquilo()
+   aquí: ese exige que no haya mano ganada, y acabar la última mano de la noche
+   y dejar el teléfono es EXACTAMENTE cuando toca ofrecer el resumen. */
+function checkResumenDia() {
+  if (preguntandoDia || document.visibilityState !== 'visible') return;
+  if (!$('#sc-game').classList.contains('on')) return;
+  if ($('#sheet').classList.contains('on') || $('#ask').classList.contains('on')) return;
+  const dia = diaDeJuego(Date.now());
+  if (!resumenDelDia(dia)) return;
+  if (Date.now() - Math.max(ultimoApunte(), aplazadoDia) < SIN_ANOTAR_MS) return;
+  preguntarSigues(dia);
+}
+
+async function preguntarSigues(dia) {
+  preguntandoDia = true;
+  const siguen = await ask('¿Estás ahí?',
+    'Lleva una hora sin anotarse nada. Si siguen jugando, lo que venga sigue ' +
+    'sumando al resumen del día.',
+    'Seguimos anotando', false, '', 'Ver el resumen');
+  preguntandoDia = false;
+  aplazadoDia = Date.now();      // la próxima pregunta, una hora después de esta
+  if (!siguen) await verResumenDia(dia, true);
+}
+
+/* ---------- 3. el día anterior, al abrir ---------- */
+/* Se jugó hasta las dos de la madrugada y al día siguiente se abre la app: eso
+   fue la noche de AYER, y merece su resumen antes de empezar otra. Una sola
+   vez — de ahí diaVisto. */
+async function ofrecerResumenAyer() {
+  if (preguntandoDia) return;
+  if ($('#sheet').classList.contains('on') || $('#ask').classList.contains('on')) return;
+  const ultima = S.history[S.history.length - 1];
+  if (!ultima) return;
+  const dia = diaDeJuego(ultima.ts);
+  if (dia >= diaDeJuego(Date.now())) return;    // lo de hoy no es "el día anterior"
+  if (S.diaVisto === dia || !resumenDelDia(dia)) return;
+  preguntandoDia = true;
+  S.diaVisto = dia; save();
+  await verResumenDia(dia);
+  preguntandoDia = false;
+}
+
 const momentoTranquilo = () =>
   !$('#sheet').classList.contains('on') &&
   !$('#ask').classList.contains('on') &&
@@ -5029,6 +5205,11 @@ if ('serviceWorker' in navigator) {
 
 checkIdle();
 render();
+
+/* Lo de anoche se ofrece al abrir, sin esperar al service worker: no tiene
+   nada que ver con las actualizaciones y en la primera visita ese ready puede
+   tardar. Volver a la app lo intenta otra vez, por si se abrio de madrugada. */
+ofrecerResumenAyer();
 
 // si entró una versión nueva desde la última vez, decirlo
 if ('serviceWorker' in navigator) {

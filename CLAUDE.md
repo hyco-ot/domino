@@ -186,6 +186,8 @@ Team names don't exist at a trio: each column is a person, so the "Nombres de lo
 
 The menu's **Acostar la pantalla** (3.01, phones only) exists because dropping the lock is not enough: most people keep their phone's own rotation lock switched on, and then nothing turns. It tries the real thing first — fullscreen plus `screen.orientation.lock` — and falls back to rotating the `<body>` 90° in CSS when that throws, which is what iOS does. It rotates the **body**, not `#app`: the pad, the dialogs and the winner screen are siblings of `#app`, so rotating `#app` alone would leave them standing upright on top of a rotated board. `acostado` is screen state and does not persist.
 
+**The winner screen is the moment the phone gets turned around**, so it carries a rotate button of its own (`#win-acostar`): `.win` covers everything at `z-index:50`, and the floating one underneath cannot be reached from there. It shows in **both** orientations on purpose — from a phone held upright, a landscape-only button would mean closing the result, rotating, and opening it again, which is the opposite of showing it to the table. Laid down, the mode tile goes (it says nothing the board doesn't) and the **losing** side's name takes its place under the score — the half of the story the big coloured name leaves out, and with three there are two of them. Both swaps hang off `[data-apaisado="1"]`; standing up nothing changes, because there the height is already spoken for.
+
 ### Two ways to sit down, three ways to score
 
 Two axes, and keeping them apart is the whole design:
@@ -229,6 +231,22 @@ There is nothing to "resume", and the detail sheet says so out loud rather than 
 It fires only at quiet moments — `momentoTranquilo()`, shared with `autoApply()`: not with the pad open, not over another dialog, not with a won hand on screen. The triggers are closing the winner screen, opening the app, and returning to it.
 
 The counting lives on the group record, **never recomputed from `S.history`**: history is a 100-hand window, and a habit that forms over three months would erase its own evidence.
+
+### The day of play ends at 7am, not at midnight
+
+Playing until two in the morning on a Friday is Thursday **night**, and cutting it at midnight would misreport what happened. `diaDeJuego(ts)` is `dayKey(ts − 7h)`; `DIA_CORTE_H` is that 7.
+
+**`dayKey()` itself was deliberately left alone.** Two older things run on the calendar day and expect it: the history's "Ayer" label, where people expect dates, and `contarAparicion()`, whose counter has been adding up under that rule for months. Moving the day underneath them would shift the ground for both.
+
+`resumenDelDia(dia)` answers three things about a day: how many hands, how many lisas, and who won most. The first two count **everything**, Blitz included; the names can only come from hands carrying `r.mesa`, which are the only ones that know who was sitting. It returns `null` below `RESUMEN_MIN` (3) — under three hands there is nothing worth calling a summary.
+
+Three ways reach it, and they are not the same question:
+
+- **The floating button**, bottom-left of the board, from the fifth hand (`RESUMEN_BOTON`). Left, because **`#btn-acostar` already owns the right** — two of them fighting for the same thumb is not an option. Tapping it does *not* close the day.
+- **"¿Estás ahí?"**, after an hour with nothing scored (`SIN_ANOTAR_MS`). It deliberately does **not** go through `momentoTranquilo()`: that one refuses with a won hand on screen, and finishing the last hand of the night and putting the phone down is exactly when the summary is wanted. Answering "Seguimos anotando" sets `aplazadoDia`, so the hour counts from the answer and not from the last hand — it asks again an hour later, for as long as the app stays open.
+- **Yesterday's, on opening.** If the newest hand's play-day is earlier than today's, it is offered; `S.diaVisto` is what keeps that to once.
+
+`ultimoApunte()` reads the last timestamp out of `S.rounds` / `S.history` rather than keeping a variable, so the clock survives a reload — which is precisely when an in-memory one would restart from zero and never ask.
 
 ### The table asks who and how many
 
