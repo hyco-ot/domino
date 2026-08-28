@@ -1053,8 +1053,19 @@ button{border:0;background:none;cursor:pointer}
 /* El marcador final, 200% mas grande: a 19px se perdia debajo del nombre y es
    justo el dato que se mira. Se acota con clamp porque en un telefono estrecho
    un "305 — 290" a 57px no cabe de una linea. */
-.win .final{font-size:clamp(34px,13vw,57px);font-weight:700;color:var(--dim);
+.win .final{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;
+  gap:0 .34em;
+  font-size:clamp(34px,13vw,57px);font-weight:700;color:var(--dim);
   font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.05}
+.win .final i{font-style:normal}
+/* De tres y DE PIE los guiones no caben: nueve cifras más dos guiones se pasan
+   del ancho y el tercer marcador se iba partido a la línea de abajo. Se quitan
+   y los números se separan el doble, que dice lo mismo con la mitad de tinta.
+   Acostado hay ancho de sobra y vuelven. */
+.win .final.tres{gap:0 .62em}
+.win .final.tres i{display:none}
+[data-apaisado="1"] .win .final.tres{gap:0 .34em}
+[data-apaisado="1"] .win .final.tres i{display:block}
 /* De pie no sale: ahí manda el nombre del que ganó y el alto está justo. */
 .win .perdio{display:none;font-size:15px;font-weight:600;color:var(--dim);
   opacity:.75;text-align:center;max-width:100%}
@@ -2675,8 +2686,12 @@ function render() {
     $('#win-lisa').hidden = !lisa;
     if (lisa) $('#win-lisa').textContent = cantoLisa();
     $('#win-name').textContent = teamName(w);
-    // el marcador final, con tantas cifras como columnas
-    $('#win-final').textContent = cadaEq().map(t => S.scores[t] || 0).join(' — ');
+    /* El marcador final, con tantas cifras como columnas. Va en trozos y no en
+       una sola cadena para que el CSS pueda quitar los guiones sin tocar los
+       números: si estamos de pie o acostados solo lo sabe él. */
+    $('#win-final').classList.toggle('tres', cadaEq().length === 3);
+    $('#win-final').innerHTML = cadaEq()
+      .map(t => `<span>${S.scores[t] || 0}</span>`).join('<i>—</i>');
     // los que no ganaron; de tres son dos, y van los dos
     $('#win-perdio').textContent = cadaEq().filter(t => t !== w).map(t => teamName(t)).join(' · ');
     // el mismo botón de siempre, en el único sitio donde se alcanza estando aquí
