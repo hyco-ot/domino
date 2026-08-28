@@ -1094,6 +1094,17 @@ button{border:0;background:none;cursor:pointer}
 .win-flip svg{width:20px;height:20px;fill:none;stroke:currentColor;
   stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;animation:none}
 
+/* La hora. z-index bajo a propósito: el teclado de puntos (21), los diálogos
+   (40) y el cartel de ganador la tapan, que es lo que tienen que hacer. Los
+   botones flotantes están en las esquinas y este va al centro. */
+.reloj{position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(5px + env(safe-area-inset-bottom));z-index:5;
+  font-size:13px;font-weight:600;color:var(--dim);opacity:.7;
+  font-variant-numeric:tabular-nums;letter-spacing:.04em;pointer-events:none}
+.reloj[hidden]{display:none}
+/* que la última fila del log no se quede debajo del reloj sin poder verse */
+.entries{padding-bottom:20px}
+
 /* El velo de atenuar. z-index por encima del cartel de ganador (50), que si no
    se quedaría iluminado él solo. Se va y viene con opacidad y no con display,
    para que el apagón sea un fundido y no un parpadeo. */
@@ -1766,6 +1777,9 @@ button{border:0;background:none;cursor:pointer}
   </div>
 </div>
 
+<!-- La hora, que a pantalla completa ya no la pone el teléfono. -->
+<div class="reloj" id="reloj" hidden aria-hidden="true"></div>
+
 <!-- El velo que atenúa. Va el último y por encima de todo: la pantalla se
      oscurece entera, cartel de ganador y teclado incluidos. -->
 <div class="atenua" id="atenua"></div>
@@ -2093,7 +2107,9 @@ async function acostar() {
 }
 async function levantar() {
   try { screen.orientation.unlock(); } catch {}
-  try { if (document.fullscreenElement) await document.exitFullscreen(); } catch {}
+  /* NO se sale de pantalla completa: ahora es el estado normal de la app, y
+     salirse dejaría la barra de estado puesta solo por haber girado una vez.
+     Antes sí se salía, porque solo se entraba para poder acostarla. */
   acostado = false;
   buzz(10); render();
 }
@@ -2541,6 +2557,11 @@ function render() {
   // S.mode y no inGame: esa se declara mas abajo en esta misma funcion
   $('#btn-dia').hidden = !(S.mode && view === 'game' &&
     manosDelDia(diaDeJuego(Date.now())).length >= RESUMEN_BOTON);
+  /* El reloj, solo en el tablero: en las demás pantallas la franja de abajo
+     la ocupa un botón y se le pondría encima. Se mira S.mode y no inGame, que
+     se declara más abajo en esta misma función. */
+  $('#reloj').hidden = !(S.mode && view === 'game');
+  pintarReloj();                         // que no espere al primer segundo
   fab.classList.toggle('on', !!acostado);
   fab.setAttribute('aria-label', acostado ? 'Levantar la pantalla' : 'Acostar la pantalla');
   $$('[data-set-style]').forEach(b => b.setAttribute('aria-checked', b.dataset.setStyle === S.style));
@@ -3398,6 +3419,40 @@ const SIN_ANOTAR_MS = 60 * 60 * 1000;
 
 const manosDelDia = dia => S.history.filter(r => diaDeJuego(r.ts) === dia);
 
+/* Una mano que tarda más de esto no es una mano: es que se levantaron. Cuenta
+   como veinte minutos y no como las tres horas que estuvieron cenando. */
+const HUECO_MAX = 20 * 60 * 1000;
+
+/* Tiempo jugado en un puñado de manos. Solo se sabe cuándo terminó cada una,
+   así que el hueco hasta la siguiente es lo que duró la siguiente. */
+function tiempoJugado(manos) {
+  const ts = manos.map(r => r.ts).filter(Boolean).sort((a, b) => a - b);
+  if (ts.length < 2) return 0;         // con una sola no hay nada que medir
+  let suma = 0;
+  for (let i = 1; i < ts.length; i++) suma += Math.min(ts[i] - ts[i - 1], HUECO_MAX);
+  return suma + suma / (ts.length - 1);   // la primera, el hueco medio
+}
+
+/* Todo lo jugado, DÍA A DÍA y no de un tirón: entre la última mano de un
+   jueves y la primera del viernes hay un hueco que no es juego, y aunque el
+   tope lo recortaría, colaría veinte minutos falsos por cada día. */
+function tiempoTotal() {
+  const dias = new Map();
+  S.history.forEach(r => {
+    const d = diaDeJuego(r.ts);
+    dias.set(d, (dias.get(d) || []).concat(r));
+  });
+  return [...dias.values()].reduce((a, m) => a + tiempoJugado(m), 0);
+}
+
+const duracionTxt = ms => {
+  const min = Math.round(ms / 60000);
+  if (min < 1) return 'un rato';
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60), m = min % 60;
+  return m ? `${h} h ${m} min` : `${h} h`;
+};
+
 /* Qué pasó ese día. El total y las lisas cuentan TODO, Blitz incluido; los
    nombres solo pueden salir de las manos con jugadores, que son las únicas que
    saben quién estaba sentado. */
@@ -3415,12 +3470,13 @@ function resumenDelDia(dia) {
     });
   });
   const top = [...gana.entries()].sort((a, b) => b[1] - a[1]);
-  return { dia, manos: manos.length, lisas, top };
+  return { dia, manos: manos.length, lisas, top, tiempo: tiempoJugado(manos) };
 }
 
 function textoResumen(r) {
   const linea1 = `${r.manos} mano${r.manos === 1 ? '' : 's'}` +
-    (r.lisas ? `, ${r.lisas} lisa${r.lisas === 1 ? '' : 's'}` : ', ninguna lisa') + '.';
+    (r.lisas ? `, ${r.lisas} lisa${r.lisas === 1 ? '' : 's'}` : ', ninguna lisa') +
+    (r.tiempo ? `, unos ${duracionTxt(r.tiempo)} jugando` : '') + '.';
   if (!r.top.length) return linea1;
   const cima = r.top[0][1];
   const primeros = r.top.filter(([, n]) => n === cima).map(([n]) => n);
@@ -3572,6 +3628,18 @@ const puedeRehacer = r => !r.mesa
   ? true
   : idsLlenos(r.mesa) === (manoTres(r) ? 3 : 4) && r.mesa.filter(Boolean).every(id => !!jugadorDe(id));
 
+/* Lo que duró la mano guardada en i: el hueco desde la que terminó antes.
+   Devuelve 0 —y entonces no se enseña— cuando no se puede saber: si es la
+   primera del historial, si la anterior es de otro día de juego, o si el hueco
+   pasa del tope y por tanto ahí hubo algo más que dominó. */
+function duroLaMano(i) {
+  const r = S.history[i], p = S.history[i - 1];
+  if (!r || !r.ts || !p || !p.ts) return 0;
+  if (diaDeJuego(p.ts) !== diaDeJuego(r.ts)) return 0;
+  const d = r.ts - p.ts;
+  return (d > 0 && d <= HUECO_MAX) ? d : 0;
+}
+
 function abrirMano(i) {
   const r = S.history[i];
   if (!r) return;
@@ -3591,6 +3659,9 @@ function abrirMano(i) {
   if (M)    filas.push(fila('Modo', `${escapa(M.label)} · doble ${M.pips}`));
   filas.push(fila(r.manos ? 'Tanda' : 'Puntos para ganar',
                   r.manos ? cuantaTxt(r.mejor || 5) : r.target));
+  // lo que duró, solo cuando se puede saber
+  const duro = duroLaMano(i);
+  if (duro) filas.push(fila('Duró', duracionTxt(duro)));
   /* De tres, cada columna es una persona y su nombre YA es el de la fila: no
      hace falta repetirlo debajo de sí mismo. */
   /* Quién jugó cada columna. Si el nombre del equipo ya es el de ellos, la fila
@@ -3753,6 +3824,7 @@ function renderStats() {
         ${row(TIPO_TXT.informal, informales)}
         ${sinMarcar ? row('Sin marcar', sinMarcar) : ''}
         ${yo ? row('Ganadas por ti', yo.ganadas || 0) : ''}
+        ${row('Tiempo jugando', duracionTxt(tiempoTotal()))}
       </div>
     </div>
     ${cadaUnoHTML()}
@@ -4893,6 +4965,44 @@ setInterval(() => {
   } catch {}
 })();
 
+/* La hora, con segundos. Respeta el mismo formato de 12 o 24 que el resto de
+   la app, que es una opción de Ajustes y no un gusto de este reloj.
+
+   Se escribe directo en el elemento, NUNCA por render(): repintar la app
+   entera sesenta veces por minuto para mover una cifra sería absurdo, y encima
+   pisaría el nombre de equipo que se esté escribiendo. */
+function pintarReloj() {
+  const el = $('#reloj');
+  if (!el || el.hidden) return;
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  const h = d.getHours(), ss = `${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  el.textContent = S.hora12 ? `${h % 12 || 12}:${ss} ${h < 12 ? 'a.m.' : 'p.m.'}`
+                            : `${p(h)}:${ss}`;
+}
+setInterval(pintarReloj, 1000);
+
+/* Siempre a pantalla completa: la barra de estado no aporta nada en una mesa
+   de dominó y se come una franja del tablero.
+
+   No se puede pedir al cargar —el navegador solo la concede desde un gesto—,
+   así que se pide en el primer toque. En la app instalada ya viene del
+   manifest y no hace falta molestar, por eso se mira antes. Y solo en
+   teléfono: en un ordenador, apoderarse del monitor entero sin que nadie lo
+   haya pedido es otra cosa.
+
+   Se intenta UNA vez por sesión, a propósito: si el navegador dice que no, o
+   si alguien se sale a mano, insistir en cada toque sería pelearse con él. */
+let pantallaFija = false;
+
+function aPantallaCompleta() {
+  if (pantallaFija || !esTelefono()) return;
+  pantallaFija = true;
+  if (matchMedia('(display-mode: fullscreen)').matches) return;   // ya la trae puesta
+  const el = document.documentElement;
+  if (el.requestFullscreen) el.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+}
+addEventListener('pointerdown', aPantallaCompleta, { once: true, capture: true });
+
 /* Minuto y medio sin tocar nada y la pantalla se pone oscura, sin apagarse.
    No persiste: es estado de pantalla, como acostado. */
 const ATENUA_MS = 90 * 1000;
@@ -4902,6 +5012,37 @@ function atenuar() {
   if (atenuado || document.visibilityState !== 'visible') return;
   atenuado = true;
   $('#atenua').classList.add('on', 'captura');
+  oirElSensor(true);
+}
+
+/* Levantar el teléfono la aclara, sin tener que tocarla. Se mira hacia dónde
+   cae la GRAVEDAD, no el zarandeo: en la mesa está tumbado y la gravedad le va
+   por el eje Z; al cogerlo para mirarlo se endereza y se va al Y.
+
+   Por sacudida no valdría: en una partida de dominó la mesa recibe golpes todo
+   el rato y la pantalla no se quedaría oscura ni un minuto. Un golpe mueve el
+   teléfono pero no lo inclina, así que por aquí no despierta. */
+const INCLINA_COS = .87;          // ~30 grados de diferencia
+let gRef = null;                  // cómo estaba puesto al oscurecerse
+
+function alMoverse(e) {
+  const g = e.accelerationIncludingGravity;
+  if (!g || g.x == null) return;
+  const m = Math.hypot(g.x, g.y, g.z);
+  if (m < 3) return;              // caída libre o lectura sin sentido
+  if (!gRef) { gRef = [g.x, g.y, g.z]; return; }   // la primera es la referencia
+  const [x, y, z] = gRef;
+  const cos = (x * g.x + y * g.y + z * g.z) / (Math.hypot(x, y, z) * m);
+  if (cos < INCLINA_COS) despertar();
+}
+
+/* Solo mientras está oscura. En iPhone hace falta pedir permiso desde un toque
+   y no se pide: saldría una ventana que nadie ha pedido, y ahí despertar
+   tocando sigue funcionando igual. */
+function oirElSensor(si) {
+  gRef = null;
+  if (si) addEventListener('devicemotion', alMoverse);
+  else removeEventListener('devicemotion', alMoverse);
 }
 
 /* Se llama con cada toque, tecla o vuelta a la app. Cuando el toque viene del
@@ -4912,6 +5053,7 @@ function despertar(delVelo) {
   atenuaT = setTimeout(atenuar, ATENUA_MS);
   if (!atenuado) return;
   atenuado = false;
+  oirElSensor(false);
   $('#atenua').classList.remove('on');
   clearTimeout(capturaT);
   if (delVelo) capturaT = setTimeout(() => $('#atenua').classList.remove('captura'), 400);
@@ -5240,8 +5382,12 @@ async function avisarActualizacion() {
    instalen. En iOS no existe beforeinstallprompt, así que ahí lo único que se
    puede hacer es explicar el camino a mano. */
 let installPrompt = null;
+/* Instalada en modo fullscreen NO casa con (display-mode: standalone): son
+   modos distintos y la consulta mira el que hay puesto, no la familia. Sin
+   preguntar por los dos, a quien ya la tiene le volvería a salir "instálala". */
 const yaInstalada = () =>
-  matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  matchMedia('(display-mode: standalone)').matches ||
+  matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true;
 const esIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 
 function paintInstall() {

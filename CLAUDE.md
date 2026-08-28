@@ -295,7 +295,32 @@ The app holds a `wakeLock` so the screen never sleeps mid-hand, and that is paid
 
 **The trap is the tap that wakes it.** `click` arrives *after* `pointerdown`, so a veil that stopped capturing the moment it turned transparent would hand that click to whatever button was underneath — waking the screen would score a hand. Being visible and swallowing touches are therefore two classes: `.on` (opacity) goes immediately, `.captura` (`pointer-events:auto`) lingers 400 ms. Anything that dismisses an overlay on `pointerdown` has this shape.
 
+**Picking the phone up clears it, and that is measured as tilt, not as shaking.** `alMoverse()` compares the current gravity vector against the one recorded when the veil went up, and wakes past ~30° (`INCLINA_COS`). A shake threshold would be useless here: a domino table gets pounded all night, and the screen would never stay dim. A thump moves the phone without tilting it. The listener is attached only while the veil is up — a sensor running all night would burn the battery this exists to save. On iOS `DeviceMotionEvent.requestPermission` needs its own gesture and is deliberately **not** asked for: a permission dialog nobody requested is worse than tapping the screen, which still works.
+
 `atenuado` is screen state and does not persist, like `acostado`. The document-level wake listeners are `{capture: true}` so a handler that stops propagation cannot swallow the reset, and they do nothing while the veil is up — there the veil itself is what answers.
+
+### Fullscreen is the normal state, so the app has to draw the clock
+
+`manifest.display` is **fullscreen**, and that is only half of it: the manifest means nothing in a browser tab, and `requestFullscreen()` is granted **only from a user gesture** — never on load. So `aPantallaCompleta()` also asks on the first `pointerdown`, once per session, phones only. Once, on purpose: if the browser refuses, or someone leaves fullscreen by hand, asking again on every tap is picking a fight.
+
+Two things had to move with it, and the second is the dangerous one:
+
+- `levantar()` **no longer calls `exitFullscreen()`**. It used to, because fullscreen was only ever entered in order to lock the orientation; now it is the app's resting state and dropping it would leave the status bar back just for having rotated once.
+- `yaInstalada()` had to learn `(display-mode: fullscreen)`. The media query matches the mode in force, not a family, so an app installed in fullscreen mode stops matching `standalone` — and everyone who already had it installed would have been offered the install prompt again.
+
+Changing `display` also changes the manifest's identity, so Chrome re-mints the WebAPK. That is what the version number in Android's app info counts — it is the wrapper's, never the app's, and `VERSION` never appears there.
+
+With no status bar there is no clock, so `#reloj` puts one at the bottom centre — the one free part of that strip, with `#btn-acostar` on the right and `#btn-dia` on the left. **Board only**: every other screen has a button along the bottom and a fixed clock would sit on top of it. `pintarReloj()` writes `textContent` directly on a 1 s interval and **never calls `render()`** — sixty full repaints a minute would also clobber a team name being typed. It follows `S.hora12` like the rest of the app.
+
+### How long they played is an estimate, and says so
+
+Only the **end** of each hand is recorded (`r.ts`), so a hand's length is the gap from the one before it. Gaps are capped at `HUECO_MAX` (20 min): without a cap, an afternoon with a three-hour dinner in the middle would report five hours of dominoes. That cap is why the wording is *estimado*.
+
+- `tiempoJugado(manos)` sums the capped gaps and adds the mean gap once, for the first hand — nothing precedes it to subtract from.
+- `tiempoTotal()` sums **day by day**, never in one pass: the gap between Thursday's last hand and Friday's first is not play, and though the cap would trim it, it would still smuggle in 20 false minutes per day.
+- `duroLaMano(i)` feeds the history detail and returns **0 when it cannot know** — first record, previous hand on another play-day, or a gap past the cap. The row is then not drawn at all. Showing the cap as though it were a measurement would be inventing data.
+
+The totals come from the 400-hand window, unlike the durable per-player counters. That is a real limit: months older than those 400 hands are not in it.
 
 ### Session and idle reset
 
