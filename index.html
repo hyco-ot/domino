@@ -1027,6 +1027,8 @@ button{border:0;background:none;cursor:pointer}
 .ask-btns button{flex:1;padding:12px;border-radius:14px;font-weight:600;font-size:14.5px}
 .ask-btns .no{border:1px solid var(--line);color:var(--dim)}
 .ask-btns .yes{background:var(--ok);color:var(--on-solid)}
+/* .ask-btns button trae su propio display: sin esto el hidden no lo esconde */
+.ask-btns button[hidden]{display:none}
 .ask-btns .yes.danger{background:var(--danger)}
 .ask-btns .yes:disabled{opacity:.4}
 
@@ -2326,6 +2328,24 @@ function cantoGanador(t) {
   if (n === DEFAULT_NAMES[0]) return '¡Ganamos!';
   if (n === DEFAULT_NAMES[1]) return '¡Ganaron!';
   return `¡Ganó ${n}!`;
+}
+
+/* A partir de tres seguidas la gente ya lo esta contando en voz alta; con dos
+   todavia no es nada. */
+const RACHA_MIN = 3;
+
+/* Cuantas manos seguidas lleva ganadas esa columna. Se cuenta hacia atras por
+   el historial mientras las manos sean de ESTA tanda: en cuanto aparece una de
+   otra gente, o una que gano otro, la racha se acabo ahi.
+   Una racha es reciente por definicion, asi que la ventana de 400 sobra. */
+function rachaDe(t) {
+  let n = 0;
+  for (let i = S.history.length - 1; i >= 0; i--) {
+    const r = S.history[i];
+    if (r.ident !== S.ident || r.w !== t) break;
+    n++;
+  }
+  return n;
 }
 
 const isLisa = () => S.over >= 0 &&
@@ -3660,7 +3680,12 @@ function addRound(team, pts, pase = 0, capi = false, tran = false) {
     /* La lisa se lleva el cartel cuando la hay: es lo más gordo que puede pasar.
        Si no, se cantan los nombres — con jugadores son las personas, y en Blitz
        el nombre del equipo, que es lo único que se sabe de ellos. */
+    /* Orden de importancia: la lisa se lo lleva todo; despues la racha, que es
+       lo que se grita; y si no hay ninguna de las dos, quien gano. El color del
+       cartel ya dice de quien es, asi que la racha no repite el nombre. */
+    const seguidas = rachaDe(team);
     if (isLisa()) bigReact(cantoLisa());
+    else if (seguidas >= RACHA_MIN) bigReact(`¡Y van ${seguidas} seguidas!`, team);
     else bigReact(cantoGanador(team), team);
   } else {
     reactTo(team, pts, capi, pase);
@@ -3915,6 +3940,8 @@ function ask(title, msg, okLabel = 'Sí', danger = false, checkLabel = '', noLab
     yes.textContent = okLabel;
     // el diálogo se reutiliza, así que la etiqueta del "no" se repone siempre
     no.textContent = noLabel;
+    // sin etiqueta no hay nada que decir con el: se quedaba una caja vacía
+    no.hidden = !noLabel;
     yes.classList.toggle('danger', danger);
 
     chk.hidden = !checkLabel;
@@ -4512,6 +4539,23 @@ $('#btn-menu').addEventListener('click', e => { e.stopPropagation(); menu.classL
 document.addEventListener('click', () => menu.classList.remove('on'));
 
 // Las acciones del menú, aparte para que "Limpiar" salga también desde Ajustes.
+/* Al dejar la mesa, decir como queda: cuantas manos se jugaron y como van. Sale
+   de S.games, que es exactamente la cuenta de esta tanda y se reinicia sola
+   cuando cambia quien juega — no hace falta guardar nada nuevo.
+
+   El nombre va delante y el numero detras, para las dos y para las tres
+   columnas igual: cualquier forma con verbo ("gano" / "ganaron") se rompe con
+   "Nosotros", que es un pronombre. */
+function comoQueda() {
+  const eq = cadaEq();
+  const g = eq.map(t => S.games[t] || 0);
+  const total = g.reduce((a, b) => a + b, 0);
+  if (!total) return null;
+  const orden = eq.slice().sort((a, b) => g[b] - g[a]);
+  const marcador = orden.map(t => `${teamName(t)} ${g[t]}`).join(' · ');
+  return `${total} mano${total === 1 ? '' : 's'}. ${marcador}.`;
+}
+
 async function doAct(act) {
   // Nueva mano y Modo están en el menú, a un dedo de distancia del botón de
   // opciones: llevan casilla para que un toque de más no borre la anotación.
@@ -4526,11 +4570,15 @@ async function doAct(act) {
   // mano no significa nada. Con puntos anotados no se deja: primero Nueva mano.
   if (act === 'mode') {
     if (S.rounds.length) return;
+    // se lee ANTES de tocar nada: newGame no borra las ganadas, pero mejor no
+    // depender de eso desde aqui
+    const queda = comoQueda();
     newGame();
     S.mode = null;
     S.tipo = null;                          // vuelve a preguntar Informal o Formal
     if (S.mesa) S.mesa.cerrada = Date.now();
     save(); render();
+    if (queda) ask('Así queda la mesa', queda, 'Vale', false, '', '');
   }
   // 'hist' y 'reset' se fueron: ahora se marca qué borrar en la Zona de peligro
 }
