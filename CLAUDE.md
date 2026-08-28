@@ -301,7 +301,11 @@ The app holds a `wakeLock` so the screen never sleeps mid-hand, and that is paid
 
 ### Fullscreen is the normal state, so the app has to draw the clock
 
-`manifest.display` is **fullscreen**, and that is only half of it: the manifest means nothing in a browser tab, and `requestFullscreen()` is granted **only from a user gesture** — never on load. So `aPantallaCompleta()` also asks on the first `pointerdown`, once per session, phones only. Once, on purpose: if the browser refuses, or someone leaves fullscreen by hand, asking again on every tap is picking a fight.
+`manifest.display` is **fullscreen**, and that is only half of it: the manifest means nothing in a browser tab, and `requestFullscreen()` is granted **only from a user gesture** — never on load. So `aPantallaCompleta()` also asks from a `click`, phones only.
+
+**It must be `click`, not `pointerdown`, and that shipped broken once.** A *touch* `pointerdown` does not grant transient activation in Chrome — the browser does not yet know whether the finger is tapping or starting a scroll, and it only activates on the `click`. The request was therefore rejected, and rejected **silently**; with `{once: true}` the single attempt was spent at the one moment it could not work, and fullscreen simply never happened. It now retries on every click and marks itself done **only when the promise resolves**. Note the general shape, because this app hangs things off `pointerdown` in several places: an API that needs user activation cannot be driven from a touch `pointerdown`.
+
+A manual exit sets `pantallaFija` too, from the `fullscreenchange` handler — asking again on the next tap would be arguing with whoever just closed it.
 
 Two things had to move with it, and the second is the dangerous one:
 
@@ -310,11 +314,11 @@ Two things had to move with it, and the second is the dangerous one:
 
 Changing `display` also changes the manifest's identity, so Chrome re-mints the WebAPK. That is what the version number in Android's app info counts — it is the wrapper's, never the app's, and `VERSION` never appears there.
 
-With no status bar there is no clock, so `#reloj` puts one at the bottom centre — the one free part of that strip, with `#btn-acostar` on the right and `#btn-dia` on the left. **Board only**: every other screen has a button along the bottom and a fixed clock would sit on top of it. `pintarReloj()` writes `textContent` directly on a 1 s interval and **never calls `render()`** — sixty full repaints a minute would also clobber a team name being typed. It follows `S.hora12` like the rest of the app.
+With no status bar there is no clock, so `#reloj` puts one at the bottom centre — and only there: `enPantallaCompleta()` gates it, because with the status bar showing the phone gives the time already and two clocks would disagree by a second. That check has to ask **both** ways: an installed app in fullscreen has `document.fullscreenElement === null`, while a browser tab in fullscreen does not match `(display-mode: fullscreen)`. It sits at the bottom centre — the one free part of that strip, with `#btn-acostar` on the right and `#btn-dia` on the left. **Board only**: every other screen has a button along the bottom and a fixed clock would sit on top of it. `pintarReloj()` writes `textContent` directly on a 1 s interval and **never calls `render()`** — sixty full repaints a minute would also clobber a team name being typed. It follows `S.hora12` like the rest of the app.
 
 ### How long they played is an estimate, and says so
 
-Only the **end** of each hand is recorded (`r.ts`), so a hand's length is the gap from the one before it. Gaps are capped at `HUECO_MAX` (20 min): without a cap, an afternoon with a three-hour dinner in the middle would report five hours of dominoes. That cap is why the wording is *estimado*.
+Only the **end** of each hand is recorded (`r.ts`), so a hand's length is the gap from the one before it. Gaps are capped at `HUECO_MAX` (35 min): without a cap, an afternoon with a three-hour dinner in the middle would report five hours of dominoes. **The number comes off the table, not out of the air:** a hard-fought hand runs to half an hour, so the cap has to sit above that or every long hand is counted short. It was 20 at first and did exactly that — totals came out shrunk, and a half-hour hand did not even report its length. That cap is why the wording is *estimado*.
 
 - `tiempoJugado(manos)` sums the capped gaps and adds the mean gap once, for the first hand — nothing precedes it to subtract from.
 - `tiempoTotal()` sums **day by day**, never in one pass: the gap between Thursday's last hand and Friday's first is not play, and though the cap would trim it, it would still smuggle in 20 false minutes per day.

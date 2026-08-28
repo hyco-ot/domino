@@ -2560,7 +2560,8 @@ function render() {
   /* El reloj, solo en el tablero: en las demás pantallas la franja de abajo
      la ocupa un botón y se le pondría encima. Se mira S.mode y no inGame, que
      se declara más abajo en esta misma función. */
-  $('#reloj').hidden = !(S.mode && view === 'game');
+  // y solo a pantalla completa: con barra de estado, el teléfono ya da la hora
+  $('#reloj').hidden = !(S.mode && view === 'game' && enPantallaCompleta());
   pintarReloj();                         // que no espere al primer segundo
   fab.classList.toggle('on', !!acostado);
   fab.setAttribute('aria-label', acostado ? 'Levantar la pantalla' : 'Acostar la pantalla');
@@ -3420,8 +3421,13 @@ const SIN_ANOTAR_MS = 60 * 60 * 1000;
 const manosDelDia = dia => S.history.filter(r => diaDeJuego(r.ts) === dia);
 
 /* Una mano que tarda más de esto no es una mano: es que se levantaron. Cuenta
-   como veinte minutos y no como las tres horas que estuvieron cenando. */
-const HUECO_MAX = 20 * 60 * 1000;
+   como treinta y cinco minutos y no como las tres horas que estuvieron cenando.
+
+   El número sale de la mesa, no del aire: las manos peleadas llegan a durar
+   media hora, así que el tope tiene que quedar POR ENCIMA de eso o cada mano
+   larga se contaría corta. Con 20 —que es donde estaba— el total salía menguado
+   y una mano de media hora ni siquiera decía lo que había durado. */
+const HUECO_MAX = 35 * 60 * 1000;
 
 /* Tiempo jugado en un puñado de manos. Solo se sabe cuándo terminó cada una,
    así que el hueco hasta la siguiente es lo que duró la siguiente. */
@@ -4934,6 +4940,9 @@ document.addEventListener('visibilitychange', () => {
    la pantalla" y no habia nada que levantar. */
 document.addEventListener('fullscreenchange', () => {
   if (acostado === 'real' && !document.fullscreenElement) { acostado = false; render(); }
+  // si se sale a mano, no se insiste más en esta sesión
+  if (!document.fullscreenElement) pantallaFija = true;
+  render();                    // el reloj aparece y desaparece con esto
 });
 addEventListener('orientationchange', () => setTimeout(render, 120));
 addEventListener('resize', () => {
@@ -4965,6 +4974,13 @@ setInterval(() => {
   } catch {}
 })();
 
+/* ¿Está de verdad a pantalla completa? Hay que mirar por los DOS caminos: la
+   app instalada la trae del manifest, y por ahí document.fullscreenElement es
+   null aunque no haya barra de estado; en el navegador viene de la API y
+   entonces es al revés. */
+const enPantallaCompleta = () => !!document.fullscreenElement ||
+  matchMedia('(display-mode: fullscreen)').matches;
+
 /* La hora, con segundos. Respeta el mismo formato de 12 o 24 que el resto de
    la app, que es una opción de Ajustes y no un gusto de este reloj.
 
@@ -4990,18 +5006,30 @@ setInterval(pintarReloj, 1000);
    teléfono: en un ordenador, apoderarse del monitor entero sin que nadie lo
    haya pedido es otra cosa.
 
-   Se intenta UNA vez por sesión, a propósito: si el navegador dice que no, o
-   si alguien se sale a mano, insistir en cada toque sería pelearse con él. */
-let pantallaFija = false;
+   Cuelga del CLICK y no del pointerdown, y esto no es un detalle: en Chrome un
+   pointerdown táctil NO concede activación de usuario —todavía no sabe si va a
+   ser un toque o un arrastre— y sin activación la petición se rechaza, además
+   en silencio. La activación llega con el click.
+
+   Se reintenta en cada click hasta que una entre de verdad. Se deja de insistir
+   en cuanto lo consigue, y también si alguien se sale a mano: ahí insistir sería
+   pelearse con quien la ha cerrado. */
+let pantallaFija = false;      // ya está puesta, o ya no hay que insistir
 
 function aPantallaCompleta() {
   if (pantallaFija || !esTelefono()) return;
-  pantallaFija = true;
-  if (matchMedia('(display-mode: fullscreen)').matches) return;   // ya la trae puesta
+  if (matchMedia('(display-mode: fullscreen)').matches) { pantallaFija = true; return; }
   const el = document.documentElement;
-  if (el.requestFullscreen) el.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+  if (!el.requestFullscreen) { pantallaFija = true; return; }
+  /* Solo se da por puesta cuando la promesa cumple. Si se rechaza —sin
+     activación válida todavía— no se marca nada y el siguiente click reintenta:
+     ese es justo el fallo que hubo, un único intento en el momento en que no
+     podía funcionar. */
+  el.requestFullscreen({ navigationUI: 'hide' })
+    .then(() => { pantallaFija = true; })
+    .catch(() => {});
 }
-addEventListener('pointerdown', aPantallaCompleta, { once: true, capture: true });
+addEventListener('click', aPantallaCompleta, { capture: true });
 
 /* Minuto y medio sin tocar nada y la pantalla se pone oscura, sin apagarse.
    No persiste: es estado de pantalla, como acostado. */
