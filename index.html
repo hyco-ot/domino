@@ -3615,7 +3615,12 @@ function rehacerMano(i) {
   if (r.mesa) {
     S.mesa = { ...mesaVacia(), ids: [...r.mesa], armando: false,
                modo: S.mode, grupo: r.grupo || null,
-               cuantos: idsEquipo(0, r.mesa).length > 1 ? 4 : 2 };
+               /* Cuántos eran lo dice el registro, no la mesa que haya puesta
+                  ahora: manoTres primero, porque el 3 no se puede deducir de
+                  "¿tiene compañero?" — y el false del idsEquipo es para que la
+                  pregunta de 4-o-2 no consulte tampoco la mesa viva. */
+               cuantos: manoTres(r) ? 3
+                      : (idsEquipo(0, r.mesa, false).length > 1 ? 4 : 2) };
   }
   S.names = [...r.names];
   if (r.manos && r.mejor) S.mejorDe = r.mejor;

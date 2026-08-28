@@ -223,6 +223,8 @@ There is nothing to "resume", and the detail sheet says so out loud rather than 
 
 `rehacerMano()` is hidden when any player on that table has since been deleted — a tombstoned id still resolves to a name for display, but it cannot be seated again.
 
+**How many were at that table is read off the record, never inferred.** `rehacerMano()` used to decide it with `idsEquipo(0, r.mesa).length > 1 ? 4 : 2`, and that line was wrong twice over: it has no way to answer 3, and its `idsEquipo` took the default third argument, which reads the **live** table. Repeating a trio from a four-seat table rebuilt two columns — one person against two — and repeating a foursome while sat at a trio rebuilt two. It is `manoTres(r) ? 3 : (idsEquipo(0, r.mesa, false).length > 1 ? 4 : 2)` now. The general shape: **`idsEquipo` answers "who is on team t", not "how many were playing"** — asking it the second question is what made a live-table default look harmless.
+
 ### The habitual group offers itself
 
 `contarAparicion()` has been counting since 2.00: a quartet that produces at least one saved hand scores one *appearance*, at most one per calendar day. `dayKey()` does the day part, and it is not optional — `IDLE_MS` is an hour, so a family that plays, has dinner and comes back builds two tables the same evening.
