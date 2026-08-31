@@ -2895,8 +2895,21 @@ const mejorDe = () => {
   return (v >= MEJOR_MIN && v <= MEJOR_MAX && v % 2 === 1) ? v : 5;
 };
 const paraGanar = () => Math.floor(mejorDe() / 2) + 1;
-/* "5/3": de cinco, ganando tres. Nadie dice "un mejor de cinco" en la mesa. */
-const cuantaTxt = v => `${v}/${Math.floor(v / 2) + 1}`;
+/* Cuántas manos caben como mucho antes de que alguien llegue a las que hacen
+   falta: todos los demás se quedan a una, y la siguiente la cierra. Con dos da
+   el 2N−1 de toda la vida; con tres, 3N−2. */
+const totalTanda = (paraGanar, n = nEq()) => n * (paraGanar - 1) + 1;
+
+/* "5/3": de cinco, ganando tres. Nadie dice "un mejor de cinco" en la mesa.
+
+   El primer número depende de CUÁNTOS juegan, así que hay que decírselo. Por
+   defecto mira la mesa de ahora, pero el historial tiene que pasarle la de la
+   mano guardada: una tanda de tres se lee 28/10 aunque quien la mire esté
+   sentado a una mesa de dos. */
+const cuantaTxt = (v, n = nEq()) => {
+  const gana = Math.floor(v / 2) + 1;
+  return `${totalTanda(gana, n)}/${gana}`;
+};
 /* El tope de la partida: puntos si se anotan, manos si se juega por manos. Se
    aplica al empezar, que es lo único que hace distinto a Por manos. */
 const topeDeJuego = () => porManos() ? paraGanar() : MODES[S.mode || 'dom'].target;
@@ -3605,7 +3618,7 @@ function manoHTML(r, vista, idx) {
   }
   if (vista === 'pastillas') {
     return `<div class="hcard" data-mano="${idx}">
-      <span class="htop">${ficha}<span>${r.manos ? cuantaTxt(r.mejor || 5) : r.target}</span>${tres}</span>
+      <span class="htop">${ficha}<span>${r.manos ? cuantaTxt(r.mejor || 5, eqMano(r).length) : r.target}</span>${tres}</span>
       ${marcador(r)}
       <span class="hwin" style="color:${colorMano(r, r.w)}">${noms[r.w]}</span>
       ${cuandoHTML(r)}
@@ -3613,7 +3626,7 @@ function manoHTML(r, vista, idx) {
   }
   return `<div class="hrow" data-mano="${idx}">
     <div class="hmeta">${cuandoHTML(r)}
-      <span class="hmode">${tres}<span>${r.manos ? cuantaTxt(r.mejor || 5) : r.target}</span>${ficha}</span></div>
+      <span class="hmode">${tres}<span>${r.manos ? cuantaTxt(r.mejor || 5, eqMano(r).length) : r.target}</span>${ficha}</span></div>
     <div class="hline">
       ${marcador(r)}
       <div class="hteams">${noms.map((nm, t) => `<span class="hcol">` +
@@ -3664,7 +3677,7 @@ function abrirMano(i) {
   if (tipo) filas.push(fila('Cómo se jugó', escapa(tipo)));
   if (M)    filas.push(fila('Modo', `${escapa(M.label)} · doble ${M.pips}`));
   filas.push(fila(r.manos ? 'Tanda' : 'Puntos para ganar',
-                  r.manos ? cuantaTxt(r.mejor || 5) : r.target));
+                  r.manos ? cuantaTxt(r.mejor || 5, eqMano(r).length) : r.target));
   // lo que duró, solo cuando se puede saber
   const duro = duroLaMano(i);
   if (duro) filas.push(fila('Duró', duracionTxt(duro)));
@@ -4991,9 +5004,14 @@ function pintarReloj() {
   const el = $('#reloj');
   if (!el || el.hidden) return;
   const d = new Date(), p = n => String(n).padStart(2, '0');
-  const h = d.getHours(), ss = `${p(d.getMinutes())}:${p(d.getSeconds())}`;
-  el.textContent = S.hora12 ? `${h % 12 || 12}:${ss} ${h < 12 ? 'a.m.' : 'p.m.'}`
-                            : `${p(h)}:${ss}`;
+  const h = d.getHours(), mm = p(d.getMinutes());
+  /* Sin segundos: es lo que se mira, y una cifra cambiando cada segundo en el
+     borde pide atención sin tener nada que decir. El latido sigue siendo de un
+     segundo para que el minuto entre a tiempo, pero solo se escribe cuando el
+     texto cambia: cincuenta y nueve de cada sesenta veces no hay nada que hacer. */
+  const txt = S.hora12 ? `${h % 12 || 12}:${mm} ${h < 12 ? 'a.m.' : 'p.m.'}`
+                       : `${p(h)}:${mm}`;
+  if (el.textContent !== txt) el.textContent = txt;
 }
 setInterval(pintarReloj, 1000);
 
